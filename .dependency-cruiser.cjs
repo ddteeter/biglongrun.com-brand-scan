@@ -63,7 +63,7 @@ module.exports = {
       },
       to: {
         path: "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+/.+",
-        pathNot: ["/index\\.ts$", "^src/(domain|infrastructure)/[^/]+/.+\\.ts$"]
+        pathNot: ["/index\\.ts$", "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+/.+\\.(ts|tsx)$"]
       }
     }
   ],
