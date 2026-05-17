@@ -3,8 +3,8 @@ module.exports = {
     {
       name: "no-circular",
       severity: "error",
-      from: {},
-      to: { circular: true }
+      from: { pathNot: "^node_modules" },
+      to: { circular: true, pathNot: "^node_modules" }
     },
     {
       name: "no-orphans",
