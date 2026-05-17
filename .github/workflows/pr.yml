@@ -17,3 +17,6 @@ jobs:
       - run: bun run arch
       - run: bun run format
       - run: bun run test
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e
