@@ -4,8 +4,8 @@ import { runs, jobs } from "../../../infrastructure/db/schema";
 
 // Phase 1: runs are keyed only by job; no denormalized brand link exists yet.
 // Show recent runs globally; brand-scoped runs come with a future schema tweak.
-export async function RunsTab(_args: Readonly<{ db: DB; brandId: number }>): Promise<string> {
-  const rows = await _args.db
+export async function RunsTab(args: Readonly<{ db: DB; brandId: number }>): Promise<string> {
+  const rows = await args.db
     .select({
       id: runs.id,
       startedAt: runs.startedAt,
