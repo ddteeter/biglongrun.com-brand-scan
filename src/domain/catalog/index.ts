@@ -7,3 +7,10 @@ export {
   type ParseShopifyOptions,
 } from "./shopify";
 export { SitemapCatalogDiscoverer } from "./sitemap";
+export { extractItemDetail, type ExtractItemInput, type ExtractItemResult } from "./item-extractor";
+export {
+  discoverBrandCatalog,
+  type DiscoverDeps,
+  type DiscoverInput,
+  type DiscoverResult,
+} from "./discoverer";
