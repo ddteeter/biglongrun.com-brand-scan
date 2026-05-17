@@ -2239,7 +2239,7 @@ export { Scheduler, type CronSpec } from "./scheduler";
 
 ```bash
 bun test tests/unit/scheduler.test.ts
-git add src/infrastructure/queue/ tests/unit/scheduler.test.ts package.json bun.lockb
+git add src/infrastructure/queue/ tests/unit/scheduler.test.ts package.json bun.lock
 git commit -m "feat: cron scheduler registry (croner)"
 ```
 
@@ -2837,7 +2837,7 @@ function extractJsonBlock(text: string): string {
 
 ```bash
 bun test tests/integration/anthropic-client.test.ts
-git add src/infrastructure/external/anthropic.ts tests/integration/anthropic-client.test.ts package.json bun.lockb
+git add src/infrastructure/external/anthropic.ts tests/integration/anthropic-client.test.ts package.json bun.lock
 git commit -m "feat: Anthropic client wrapper with structured extract"
 ```
 
@@ -6287,7 +6287,7 @@ describe("admin auth", () => {
 
 ```bash
 bun test tests/integration/admin-auth.test.ts
-git add src/infrastructure/http/auth-session.ts src/admin-ui/ tests/integration/admin-auth.test.ts package.json bun.lockb
+git add src/infrastructure/http/auth-session.ts src/admin-ui/ tests/integration/admin-auth.test.ts package.json bun.lock
 git commit -m "feat: admin auth (session cookies, login, middleware)"
 ```
 
@@ -7551,7 +7551,7 @@ Expected: JSON `{"ok":true,...}` returned.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/admin-ui/index.ts src/server/ src/main.ts scripts/ package.json bun.lockb
+git add src/admin-ui/index.ts src/server/ src/main.ts scripts/ package.json bun.lock
 git commit -m "feat: composition root + main entry + seed/password scripts"
 ```
 
@@ -7568,7 +7568,7 @@ git commit -m "feat: composition root + main entry + seed/password scripts"
 # syntax=docker/dockerfile:1
 FROM oven/bun:1-alpine AS deps
 WORKDIR /app
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production=false
 
 FROM oven/bun:1-alpine AS build
