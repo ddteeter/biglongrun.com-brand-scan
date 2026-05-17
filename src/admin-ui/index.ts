@@ -7,6 +7,7 @@ import { authActions } from "./actions/auth";
 import { brandActions } from "./actions/brand";
 import { sourceActions } from "./actions/source";
 import { queueActions } from "./actions/queue";
+import { itemActions } from "./actions/item";
 import { dashboardRoute } from "./pages/dashboard";
 import { brandsListRoute } from "./pages/brands-list";
 import { brandDetailRoute } from "./pages/brand-detail";
@@ -38,6 +39,7 @@ export function adminUi(args: AdminUiArgs): AnyElysia {
     .use(sourceActions({ db: args.db, queue: args.queue }))
     .use(queueRoute({ db: args.db, artifactsPublicBaseUrl: args.artifactsPublicBaseUrl }))
     .use(queueActions({ db: args.db, authorSlug: args.authorSlug }))
+    .use(itemActions({ db: args.db, authorSlug: args.authorSlug }))
     .use(cohortRoute({ db: args.db, queue: args.queue }))
     .use(jobsRoute({ db: args.db }))
     .use(usageRoute({ db: args.db }))
