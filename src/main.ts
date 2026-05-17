@@ -113,6 +113,17 @@ function boot(): void {
       });
     },
   });
+  scheduler.register({
+    name: "compute-brand-cadence",
+    cron: "0 5 * * 1", // weekly Mondays 05:00 UTC
+    enqueue: async () => {
+      await queue.enqueue({
+        jobType: "compute-brand-cadence",
+        payload: {},
+        dedupeKey: `compute-brand-cadence:${new Date().toISOString().slice(0, 10)}`,
+      });
+    },
+  });
   scheduler.start();
 
   const app = buildApp({

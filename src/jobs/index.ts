@@ -14,6 +14,7 @@ import { makeScoreBrandHandler } from "./score-brand";
 import { makeRecomputeCohortSummaryHandler } from "./recompute-cohort-summary";
 import { makeDiscoverBrandCatalogHandler } from "./discover-brand-catalog";
 import { makeClassifyItemTierHandler } from "./classify-item-tier";
+import { makeComputeBrandCadenceHandler } from "./compute-brand-cadence";
 
 export interface RegisterJobsArgs {
   db: DB;
@@ -74,4 +75,5 @@ export function registerJobs(args: RegisterJobsArgs): void {
       recordUsage: args.recordUsage,
     })
   );
+  registerHandler("compute-brand-cadence", makeComputeBrandCadenceHandler({ db: args.db }));
 }

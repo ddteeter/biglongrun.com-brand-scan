@@ -30,3 +30,4 @@ export {
   type DeltaSummary,
   type SummarizeOptions,
 } from "./change-detector";
+export { computeBrandCadence, type CadenceInput, type CadenceResult } from "./cadence";
