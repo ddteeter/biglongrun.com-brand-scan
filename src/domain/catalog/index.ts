@@ -24,3 +24,9 @@ export {
   type RefineInput,
   type RefineResult,
 } from "./tier-classifier";
+export {
+  summarizeCatalogDeltas,
+  type ChangeEventInput,
+  type DeltaSummary,
+  type SummarizeOptions,
+} from "./change-detector";
