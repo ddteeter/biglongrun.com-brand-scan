@@ -245,54 +245,66 @@ async function persistAndRoute(
       ? "accepted"
       : "pending_review";
 
-  const inserted = await deps.db
-    .insert(brandSizeChartVersions)
-    .values({
-      brandId: source.brandId,
-      brandSourceId: source.id,
-      sourceRunId: _runId,
-      sizeChartJson: chart as Record<string, unknown>,
-      confidenceScore: conf.composite,
-      confidenceBreakdownJson: conf.breakdown,
-      status,
-      acceptedAt: status === "accepted" ? nowIso : null,
-      acceptedBy: status === "accepted" ? "auto" : null,
-      supersedesVersionId: null,
-      deltaFromPriorJson: priorContext.lastAccepted ? { fieldsChanged: deltaCount } : null,
-    })
-    .returning();
+  // Wrap all DB writes in a transaction so a partial failure doesn't leave the
+  // DB in an inconsistent state (e.g. version inserted but brand pointer stale).
+  // Network I/O (notifyPendingReview) happens OUTSIDE the transaction below.
+  const { version, brand } = await deps.db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(brandSizeChartVersions)
+      .values({
+        brandId: source.brandId,
+        brandSourceId: source.id,
+        sourceRunId: _runId,
+        sizeChartJson: chart as Record<string, unknown>,
+        confidenceScore: conf.composite,
+        confidenceBreakdownJson: conf.breakdown,
+        status,
+        acceptedAt: status === "accepted" ? nowIso : null,
+        acceptedBy: status === "accepted" ? "auto" : null,
+        supersedesVersionId: null,
+        deltaFromPriorJson: priorContext.lastAccepted ? { fieldsChanged: deltaCount } : null,
+      })
+      .returning();
 
-  const version = inserted[0];
-  if (!version) throw new Error("Failed to insert brand_size_chart_version");
+    const v = inserted[0];
+    if (!v) throw new Error("Failed to insert brand_size_chart_version");
+
+    if (status === "accepted") {
+      if (priorContext.lastAccepted) {
+        // Supersede all previously accepted versions (including the just-inserted row if it was
+        // already accepted), then re-mark the new row as accepted.
+        await tx
+          .update(brandSizeChartVersions)
+          .set({ status: "superseded" })
+          .where(
+            and(
+              eq(brandSizeChartVersions.brandId, source.brandId),
+              eq(brandSizeChartVersions.status, "accepted")
+            )
+          );
+        await tx
+          .update(brandSizeChartVersions)
+          .set({ status: "accepted" })
+          .where(eq(brandSizeChartVersions.id, v.id));
+      }
+      await tx
+        .update(brands)
+        .set({ currentSizeChartVersionId: v.id })
+        .where(eq(brands.id, source.brandId));
+    }
+
+    // Fetch brand for notification context (read inside tx so we see consistent state)
+    const [b] = await tx.select().from(brands).where(eq(brands.id, source.brandId)).limit(1);
+    if (!b) throw new Error(`brand not found: ${String(source.brandId)}`);
+
+    return { version: v, brand: b };
+  });
 
   if (status === "accepted") {
-    if (priorContext.lastAccepted) {
-      // Supersede all previously accepted versions (including the just-inserted row if it was
-      // already accepted), then re-mark the new row as accepted.
-      await deps.db
-        .update(brandSizeChartVersions)
-        .set({ status: "superseded" })
-        .where(
-          and(
-            eq(brandSizeChartVersions.brandId, source.brandId),
-            eq(brandSizeChartVersions.status, "accepted")
-          )
-        );
-      await deps.db
-        .update(brandSizeChartVersions)
-        .set({ status: "accepted" })
-        .where(eq(brandSizeChartVersions.id, version.id));
-    }
-    await deps.db
-      .update(brands)
-      .set({ currentSizeChartVersionId: version.id })
-      .where(eq(brands.id, source.brandId));
     return { kind: "auto_accepted", versionId: version.id };
   }
 
-  // pending_review: notify
-  const [brand] = await deps.db.select().from(brands).where(eq(brands.id, source.brandId)).limit(1);
-  if (!brand) throw new Error(`brand not found: ${String(source.brandId)}`);
+  // pending_review: notify outside the transaction (no network I/O inside SQLite txn)
   const reason =
     conf.composite < LOW_CONFIDENCE_THRESHOLD ? "low confidence" : "size chart materially changed";
   await deps.notifyPendingReview({
