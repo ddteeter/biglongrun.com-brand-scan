@@ -53,25 +53,29 @@ export function makeScoreBrandHandler(args: { db: DB }): JobHandler {
     } as const;
     const composite = computeComposite(dimensionScores);
 
-    const [history] = await args.db
-      .insert(brandScoreHistory)
-      .values({
+    // Wrap history insert + snapshot promotion in a transaction so snapshot always
+    // points to a committed history row (partial failure would leave an orphaned pointer).
+    await args.db.transaction(async (tx) => {
+      const [history] = await tx
+        .insert(brandScoreHistory)
+        .values({
+          brandId,
+          scoringConfigVersion: SCORING_CONFIG_VERSION,
+          cohortSummaryId: cohort.id,
+          scoresJson: { ...dimensionScores, composite },
+          inputsJson: { sizeChartVersionId: version.id },
+        })
+        .returning();
+
+      if (!history) throw new Error("Failed to insert brand score history");
+
+      await promoteSnapshotIfWarranted({
+        db: tx,
         brandId,
-        scoringConfigVersion: SCORING_CONFIG_VERSION,
+        latestHistoryId: history.id,
         cohortSummaryId: cohort.id,
-        scoresJson: { ...dimensionScores, composite },
-        inputsJson: { sizeChartVersionId: version.id },
-      })
-      .returning();
-
-    if (!history) throw new Error("Failed to insert brand score history");
-
-    await promoteSnapshotIfWarranted({
-      db: args.db,
-      brandId,
-      latestHistoryId: history.id,
-      cohortSummaryId: cohort.id,
-      cohortBrandCount: cohort.brandCount,
+        cohortBrandCount: cohort.brandCount,
+      });
     });
   };
 }
