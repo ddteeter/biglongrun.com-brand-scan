@@ -1,9 +1,9 @@
 import { Elysia, type AnyElysia } from "elysia";
-import { and, eq } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
-import { brands, brandSizeChartVersions } from "../../infrastructure/db/schema";
+import { VersionService } from "../../domain/extraction";
 
 export function queueActions(args: Readonly<{ db: DB; authorSlug: string }>): AnyElysia {
+  const versionService = new VersionService(args.db);
   return new Elysia()
     .post("/admin/queue/:id/approve", async ({ params, request, set }) => {
       const id = Number(params.id);
@@ -21,47 +21,13 @@ export function queueActions(args: Readonly<{ db: DB; authorSlug: string }>): An
         }
       }
 
-      const version = await args.db.transaction(async (tx) => {
-        const rows = await tx
-          .select()
-          .from(brandSizeChartVersions)
-          .where(eq(brandSizeChartVersions.id, id))
-          .limit(1);
-        const v = rows[0];
-        if (!v) return null;
-
-        // Supersede any prior accepted version for this brand
-        await tx
-          .update(brandSizeChartVersions)
-          .set({ status: "superseded" })
-          .where(
-            and(
-              eq(brandSizeChartVersions.brandId, v.brandId),
-              eq(brandSizeChartVersions.status, "accepted")
-            )
-          );
-
-        // Mark this version accepted, with optional edits
-        await tx
-          .update(brandSizeChartVersions)
-          .set({
-            status: "accepted",
-            sizeChartJson: newChart ?? v.sizeChartJson,
-            acceptedAt: new Date().toISOString(),
-            acceptedBy: `human:${args.authorSlug}`,
-          })
-          .where(eq(brandSizeChartVersions.id, id));
-
-        // Point the brand to this version
-        await tx
-          .update(brands)
-          .set({ currentSizeChartVersionId: id })
-          .where(eq(brands.id, v.brandId));
-
-        return v;
+      const result = await versionService.approve({
+        versionId: id,
+        acceptedBy: `human:${args.authorSlug}`,
+        ...(newChart === null ? {} : { sizeChartOverride: newChart }),
       });
 
-      if (!version) {
+      if (!result) {
         set.status = 404;
         return "";
       }
@@ -80,25 +46,15 @@ export function queueActions(args: Readonly<{ db: DB; authorSlug: string }>): An
         set.status = 400;
         return "Reason required";
       }
-      await args.db
-        .update(brandSizeChartVersions)
-        .set({
-          status: "rejected",
-          rejectionReason: reason,
-        })
-        .where(eq(brandSizeChartVersions.id, Number(params.id)));
+      await versionService.reject({ versionId: Number(params.id), reason });
       set.status = 302;
       set.headers.location = "/admin/queue";
       return "";
     })
     .post("/admin/queue/:id/reprocess", async ({ params, set }) => {
       // Phase 1 stub: real reprocess-from-stored-artifacts is a future task.
-      const rows = await args.db
-        .select()
-        .from(brandSizeChartVersions)
-        .where(eq(brandSizeChartVersions.id, Number(params.id)))
-        .limit(1);
-      if (!rows[0]) {
+      const version = await versionService.findById(Number(params.id));
+      if (!version) {
         set.status = 404;
         return "";
       }
