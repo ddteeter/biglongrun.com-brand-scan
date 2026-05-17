@@ -6,3 +6,4 @@ export {
   ShopifyCatalogDiscoverer,
   type ParseShopifyOptions,
 } from "./shopify";
+export { SitemapCatalogDiscoverer } from "./sitemap";
