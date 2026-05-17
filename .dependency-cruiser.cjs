@@ -61,7 +61,7 @@ module.exports = {
       },
       to: {
         path: "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+/.+",
-        pathNot: ["/index\\.ts$", "/schema/[^/]+\\.ts$"]
+        pathNot: ["/index\\.ts$", "/schema/[^/]+\\.ts$", "/queue/[^/]+\\.ts$"]
       }
     }
   ],

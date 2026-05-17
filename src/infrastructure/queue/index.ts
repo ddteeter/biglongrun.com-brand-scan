@@ -7,3 +7,4 @@ export {
   type JobHandler,
   type HandlerContext,
 } from "./handlers";
+export { QueueRunner, type RunnerOptions } from "./runner";
