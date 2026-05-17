@@ -10,6 +10,7 @@ export {
   AnthropicClient,
   MODEL_SONNET,
   MODEL_HAIKU,
+  estimateAnthropicCost,
   type ModelId,
   type ExtractRequest,
   type ExtractResponse,

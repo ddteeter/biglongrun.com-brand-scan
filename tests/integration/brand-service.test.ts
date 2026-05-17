@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../../src/infrastructure/db/schema";
-import { BrandRepo, BrandSourceRepo } from "../../src/domain/brands";
+import { BrandService, BrandSourceService } from "../../src/domain/brands";
 
 function makeDb() {
   const sqlite = new Database(":memory:");
@@ -22,13 +22,13 @@ function makeDb() {
   return drizzle(sqlite, { schema });
 }
 
-describe("BrandRepo", () => {
-  let repo: BrandRepo;
-  let sourceRepo: BrandSourceRepo;
+describe("BrandService", () => {
+  let repo: BrandService;
+  let sourceRepo: BrandSourceService;
   beforeEach(() => {
     const db = makeDb();
-    repo = new BrandRepo(db);
-    sourceRepo = new BrandSourceRepo(db);
+    repo = new BrandService(db);
+    sourceRepo = new BrandSourceService(db);
   });
 
   test("create generates slug from name and avoids collisions", async () => {
@@ -45,7 +45,7 @@ describe("BrandRepo", () => {
     expect(await repo.findBySlug("nope")).toBeNull();
   });
 
-  test("BrandSourceRepo create + listForBrand", async () => {
+  test("BrandSourceService create + listForBrand", async () => {
     const b = await repo.create({ name: "X", primaryUrl: "https://x.com" });
     await sourceRepo.create({ brandId: b.id, url: "https://x.com/size", sourceType: "size_chart" });
     const sources = await sourceRepo.listForBrand(b.id);

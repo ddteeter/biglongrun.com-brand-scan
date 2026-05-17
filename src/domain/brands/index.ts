@@ -5,4 +5,4 @@ export {
   NewBrandSourceInputSchema,
   type NewBrandSourceInput,
 } from "./types";
-export { BrandRepo, BrandSourceRepo } from "./repo";
+export { BrandService, BrandSourceService } from "./service";

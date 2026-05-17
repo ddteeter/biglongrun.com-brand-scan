@@ -5,6 +5,21 @@ export const MODEL_HAIKU = "claude-haiku-4-5-20251001" as const;
 
 export type ModelId = typeof MODEL_SONNET | typeof MODEL_HAIKU;
 
+// Pricing per million tokens. Verify at https://www.anthropic.com/pricing before updating.
+// Note: Haiku 4.5 (claude-haiku-4-5-20251001) pricing uses $1/$5 per M tokens as published at time of writing.
+const PRICING_PER_MILLION_TOKENS: Record<ModelId, { input: number; output: number }> = {
+  [MODEL_SONNET]: { input: 3, output: 15 },
+  [MODEL_HAIKU]: { input: 1, output: 5 },
+};
+
+export function estimateAnthropicCost(
+  usage: { inputTokens: number; outputTokens: number },
+  model: ModelId
+): number {
+  const p = PRICING_PER_MILLION_TOKENS[model];
+  return (usage.inputTokens * p.input + usage.outputTokens * p.output) / 1_000_000;
+}
+
 export interface ExtractRequest {
   model: ModelId;
   systemPrompt: string;
