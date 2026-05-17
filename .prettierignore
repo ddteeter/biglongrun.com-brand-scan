@@ -1,0 +1,9 @@
+node_modules/
+drizzle/
+dist/
+tmp/
+playwright-report/
+test-results/
+coverage/
+bun.lock
+docs/
