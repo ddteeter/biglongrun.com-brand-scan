@@ -8,3 +8,4 @@ export {
   type HandlerContext,
 } from "./handlers";
 export { QueueRunner, type RunnerOptions } from "./runner";
+export { Scheduler, type CronSpec } from "./scheduler";

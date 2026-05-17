@@ -42,6 +42,7 @@
     "@elysiajs/cookie": "0.8.0",
     "@elysiajs/html": "1.4.2",
     "@kitajs/html": "4.2.13",
+    "croner": "10.0.1",
     "drizzle-orm": "0.45.2",
     "elysia": "1.4.28",
     "pino": "10.3.1",
