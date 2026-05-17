@@ -16,3 +16,10 @@ export {
   type PipelineInput,
   type PipelineOutcome,
 } from "./pipeline";
+export {
+  VersionService,
+  type RecordExtractionInput,
+  type ApproveInput,
+  type RejectInput,
+  type VersionRow,
+} from "./version-service";
