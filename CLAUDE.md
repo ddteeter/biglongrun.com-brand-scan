@@ -4,7 +4,7 @@ This file documents conventions for AI agents (and humans) working in this repo.
 
 ## Transactional integrity
 
-ANY operation that writes to more than one row across more than one statement MUST be wrapped in a SQLite transaction:
+ANY operation that writes to more than one row across more than one statement MUST be wrapped in a SQLite transaction. Prefer placing transactions inside **service methods** (see "Service pattern" below) rather than inline in action handlers or orchestrators — services are where the invariants live.
 
 ```typescript
 await args.db.transaction(async (tx) => {
@@ -28,19 +28,31 @@ Rationale: SQLite is single-writer but a partial-failure between statements leav
 
 When refactoring a function called from inside a transaction, accept the `tx` as a parameter and call it like `tx.update(...)` not `db.update(...)`.
 
-## Repository pattern vs direct DB selects
+## Service pattern (instead of repos)
 
-We use repos (`BrandRepo`, `BrandSourceRepo`, etc. in `src/domain/<area>/repo.ts`) for:
+We use **service** modules to encapsulate operations that have multi-table or multi-row invariants. Examples in the codebase:
 
-- All writes (so input is validated via Zod schemas)
-- Common reads with shared behavior (`findBySlug`, `list`)
+- `BrandService` (`src/domain/brands/service.ts`) — slug generation invariant on brand creation
+- `VersionService` (`src/domain/extraction/version-service.ts`) — "accept a version" invariant (insert + supersede prior + update brand pointer, all in one transaction)
+- `BrandItemService` (phase 2, `src/domain/catalog/repo.ts` — to be renamed) — upsert + change-log invariant
 
-We use direct `db.select(...)` in admin pages and one-off queries for:
+**Rule:**
 
-- Page-specific cross-table joins (no reuse value in repo)
-- Read-only display queries that don't benefit from an abstraction layer
+> Promote a multi-step DB operation to a service method WHEN it touches >1 table OR has invariants that span >1 row. Direct `db.select(...)` / `db.update(...)` is fine for single-row writes, read-only display queries, and operational-table access (jobs, runs, sessions, api_usage_log).
+>
+> If you find yourself writing the SAME multi-step write in 2+ places, promote it to a service.
 
-If you find yourself writing the SAME read query in 2+ places, promote it to the repo.
+**Enforcement:**
+
+- `src/admin-ui/actions/**` is forbidden from importing schema tables (`src/infrastructure/db/schema/**`) — actions MUST call service methods. Enforced by `dependency-cruiser`.
+- Other layers (jobs, pipeline orchestrators) can use `db` directly but should call services for multi-step writes.
+- Code review: any new `db.transaction(...)` block in a non-service file is a smell.
+
+**Why service, not repo:**
+
+- TS/Drizzle culture is closer to "service" than "repo" — the ORM is already strongly typed and most of what Java repos provide over JDBC is built in
+- Services name operations (verbs like `acceptVersion`) not tables (nouns) — fits how they're called
+- Less abstraction tax: only build a service when there's actual orchestration value
 
 ## Type derivation from schema
 
