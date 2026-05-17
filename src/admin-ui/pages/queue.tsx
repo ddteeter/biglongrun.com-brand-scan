@@ -1,6 +1,6 @@
 import { Layout, renderHtml } from "../layout";
 import { Elysia, type AnyElysia } from "elysia";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, lt, gte } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { brandSizeChartVersions, brands, runArtifacts } from "../../infrastructure/db/schema";
 
@@ -8,6 +8,12 @@ export function queueRoute(args: Readonly<{ db: DB; artifactsPublicBaseUrl: stri
   return new Elysia().get("/admin/queue", async ({ request }) => {
     const url = new URL(request.url);
     const filter = url.searchParams.get("filter") ?? "all";
+    const conditions = [eq(brandSizeChartVersions.status, "pending_review")];
+    if (filter === "low_confidence")
+      conditions.push(lt(brandSizeChartVersions.confidenceScore, 0.4));
+    else if (filter === "large_delta")
+      conditions.push(gte(brandSizeChartVersions.confidenceScore, 0.85));
+
     const versions = await args.db
       .select({
         v: brandSizeChartVersions,
@@ -15,17 +21,11 @@ export function queueRoute(args: Readonly<{ db: DB; artifactsPublicBaseUrl: stri
       })
       .from(brandSizeChartVersions)
       .innerJoin(brands, eq(brandSizeChartVersions.brandId, brands.id))
-      .where(eq(brandSizeChartVersions.status, "pending_review"))
+      .where(and(...conditions))
       .orderBy(desc(brandSizeChartVersions.extractedAt));
 
-    const filtered = versions.filter((row) => {
-      if (filter === "low_confidence") return row.v.confidenceScore < 0.4;
-      if (filter === "large_delta") return row.v.confidenceScore >= 0.85;
-      return true;
-    });
-
-    const first = filtered[0];
-    const total = filtered.length;
+    const first = versions[0];
+    const total = versions.length;
 
     const queueItemHtml = first
       ? await renderQueueItem(args.db, args.artifactsPublicBaseUrl, first)
