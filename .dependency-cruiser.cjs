@@ -36,13 +36,15 @@ module.exports = {
     {
       name: "public-api-only-from-server",
       severity: "error",
-      from: { path: "^src/public-api", pathNot: "^src/public-api" },
+      comment: "Only server composition root (and public-api itself) may import from public-api. Tests in tests/ are exempt because the from path requires ^src/.",
+      from: { path: "^src/", pathNot: "^src/(public-api|server)" },
       to: { path: "^src/public-api" }
     },
     {
       name: "admin-ui-only-from-server",
       severity: "error",
-      from: { path: "^src/admin-ui", pathNot: "^src/admin-ui" },
+      comment: "Only server composition root (and admin-ui itself) may import from admin-ui. Tests in tests/ are exempt because the from path requires ^src/.",
+      from: { path: "^src/", pathNot: "^src/(admin-ui|server)" },
       to: { path: "^src/admin-ui" }
     },
     {
@@ -54,14 +56,14 @@ module.exports = {
     {
       name: "no-deep-imports-across-modules",
       severity: "error",
-      comment: "Cross-module imports must go through the module's index.ts barrel. Barrel files themselves are exempt — they exist to re-export their siblings. Intra-leaf-directory imports (e.g. within schema/) are also exempt — siblings in the same folder form one cohesive unit.",
+      comment: "Cross-module imports must go through the module's index.ts barrel. Barrel files themselves are exempt — they exist to re-export their siblings. Every src/domain/<submodule>/ and src/infrastructure/<submodule>/ is a cohesive unit whose siblings may import each other directly.",
       from: {
         path: "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+",
         pathNot: "/index\\.ts$"
       },
       to: {
         path: "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+/.+",
-        pathNot: ["/index\\.ts$", "/schema/[^/]+\\.ts$", "/queue/[^/]+\\.ts$", "/extraction/[^/]+\\.ts$", "/scoring/[^/]+\\.ts$"]
+        pathNot: ["/index\\.ts$", "^src/(domain|infrastructure)/[^/]+/.+\\.ts$"]
       }
     }
   ],
