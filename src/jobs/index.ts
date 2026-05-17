@@ -15,6 +15,7 @@ import { makeRecomputeCohortSummaryHandler } from "./recompute-cohort-summary";
 import { makeDiscoverBrandCatalogHandler } from "./discover-brand-catalog";
 import { makeClassifyItemTierHandler } from "./classify-item-tier";
 import { makeComputeBrandCadenceHandler } from "./compute-brand-cadence";
+import { makeSweepAllBrandCatalogsHandler } from "./sweep-all-brand-catalogs";
 
 export interface RegisterJobsArgs {
   db: DB;
@@ -76,4 +77,8 @@ export function registerJobs(args: RegisterJobsArgs): void {
     })
   );
   registerHandler("compute-brand-cadence", makeComputeBrandCadenceHandler({ db: args.db }));
+  registerHandler(
+    "sweep-all-brand-catalogs",
+    makeSweepAllBrandCatalogsHandler({ db: args.db, queue: args.queue })
+  );
 }
