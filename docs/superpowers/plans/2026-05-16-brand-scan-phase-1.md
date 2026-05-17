@@ -320,9 +320,8 @@ Then overwrite `package.json` with the explicit version below.
     "isolatedModules": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*", "scripts/**/*"],
@@ -344,7 +343,7 @@ preload = []
 
 `.bun-version`:
 ```
-1.2.0
+1.3.9
 ```
 
 `.gitignore`:
@@ -427,7 +426,7 @@ bun add elysia @elysiajs/cookie @elysiajs/html @kitajs/html drizzle-orm zod pino
 bun add -d typescript @types/bun drizzle-kit eslint prettier husky lint-staged dependency-cruiser @playwright/test
 ```
 
-- [ ] **Step 9: Verify it boots**
+- [ ] **Step 9: Verify it boots + typechecks**
 
 Create `src/main.ts` placeholder:
 
@@ -438,8 +437,9 @@ console.log("brand-scan boot OK");
 Run:
 ```bash
 bun src/main.ts
+bun run typecheck
 ```
-Expected: `brand-scan boot OK`
+Expected: `brand-scan boot OK` from the first command; second command exits 0 with no errors.
 
 - [ ] **Step 10: Commit**
 
