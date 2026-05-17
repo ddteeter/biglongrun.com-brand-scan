@@ -54,6 +54,13 @@ module.exports = {
       to: { path: "^src/infrastructure" }
     },
     {
+      name: "actions-must-use-services",
+      severity: "error",
+      comment: "Admin UI actions must call services, not import schema tables. Multi-step writes belong in services with their transactional integrity.",
+      from: { path: "^src/admin-ui/actions" },
+      to: { path: "^src/infrastructure/db/schema" }
+    },
+    {
       name: "no-deep-imports-across-modules",
       severity: "error",
       comment: "Cross-module imports must go through the module's index.ts barrel. Barrel files themselves are exempt — they exist to re-export their siblings. Every src/domain/<submodule>/ and src/infrastructure/<submodule>/ is a cohesive unit whose siblings may import each other directly.",
