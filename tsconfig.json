@@ -27,6 +27,12 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*", "tests/**/*", "scripts/**/*", "drizzle.config.ts"],
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "scripts/**/*",
+    "drizzle.config.ts",
+    "playwright.config.ts"
+  ],
   "exclude": ["node_modules", "drizzle", "dist", "tmp"]
 }
