@@ -17,7 +17,10 @@ export {
 export {
   classifyByPricePercentile,
   computeBuckets,
+  refineWithAi,
   type Tier,
   type TierResult,
   type TierBuckets,
+  type RefineInput,
+  type RefineResult,
 } from "./tier-classifier";

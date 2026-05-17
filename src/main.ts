@@ -45,6 +45,9 @@ function boot(): void {
     queue,
     artifactStore,
     pushover,
+    firecrawl,
+    anthropic,
+    recordUsage: (input) => usageTracker.record(input),
     buildDiscoverDeps: () => ({
       shopify,
       sitemap,

@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { type AnthropicClient, MODEL_HAIKU } from "../../infrastructure/external";
+
 export type Tier = "flagship" | "mid" | "basic" | "unclassified";
 
 export interface TierResult {
@@ -55,5 +58,58 @@ export function classifyByPricePercentile(
   return {
     tier: "mid",
     reason: `price ${String(price)} between ${String(buckets.basicMax)} and ${String(buckets.flagshipMin)}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// AI tier refiner
+// ---------------------------------------------------------------------------
+
+const TierEnum = z.enum(["flagship", "mid", "basic", "unclassified"]);
+const RefineResponseSchema = z.object({
+  tier: TierEnum,
+  rationale: z.string().max(200),
+  confidence: z.number().min(0).max(1),
+});
+
+export interface RefineInput {
+  client: AnthropicClient;
+  itemName: string;
+  itemMarkdown: string;
+  basePriceUsd: number | null;
+  heuristic: TierResult;
+}
+
+export interface RefineResult {
+  tier: Tier;
+  rationale: string;
+  confidence: number;
+  usage: { inputTokens: number; outputTokens: number };
+}
+
+const SYSTEM_PROMPT = `You classify running-apparel products into one of three tiers:
+- flagship: brand's headlining/premium gear — top materials, marketed prominently, performance-positioned
+- mid: standard performance products
+- basic: cotton tees, simple accessories, entry-level apparel
+- unclassified: insufficient signal
+
+Inputs: a heuristic prior, the product name, and the rendered product-page markdown.
+Output JSON: { tier, rationale (<=200 chars), confidence (0-1) }.
+Use the heuristic prior as a sanity anchor. Override only with clear signal.`;
+
+export async function refineWithAi(input: RefineInput): Promise<RefineResult> {
+  const priceStr = input.basePriceUsd === null ? "(unknown)" : String(input.basePriceUsd);
+  const resp = await input.client.extractStructured({
+    model: MODEL_HAIKU,
+    systemPrompt: SYSTEM_PROMPT,
+    userText: `Item: ${input.itemName}\nBase price USD: ${priceStr}\nHeuristic prior: ${input.heuristic.tier} (${input.heuristic.reason})\n\nPage markdown:\n${input.itemMarkdown}`,
+    maxTokens: 256,
+  });
+  const parsed = RefineResponseSchema.parse(resp.parsed);
+  return {
+    tier: parsed.tier,
+    rationale: parsed.rationale,
+    confidence: parsed.confidence,
+    usage: resp.usage,
   };
 }
