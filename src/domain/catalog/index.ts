@@ -14,3 +14,10 @@ export {
   type DiscoverInput,
   type DiscoverResult,
 } from "./discoverer";
+export {
+  classifyByPricePercentile,
+  computeBuckets,
+  type Tier,
+  type TierResult,
+  type TierBuckets,
+} from "./tier-classifier";
