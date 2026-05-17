@@ -1,10 +1,10 @@
 import { and, desc, eq } from "drizzle-orm";
 import type { DB } from "../../../infrastructure/db";
 import { brandSizeChartVersions } from "../../../infrastructure/db/schema";
-import { BrandRepo } from "../../../domain/brands";
+import { BrandService } from "../../../domain/brands";
 
 export async function SizeChartTab(args: Readonly<{ db: DB; brandId: number }>): Promise<string> {
-  const repo = new BrandRepo(args.db);
+  const repo = new BrandService(args.db);
   const brand = await repo.findById(args.brandId);
   if (!brand?.currentSizeChartVersionId) return <p>No accepted size chart yet.</p>;
   const [current] = await args.db

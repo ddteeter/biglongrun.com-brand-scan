@@ -1,10 +1,10 @@
 import { eq, desc } from "drizzle-orm";
 import type { DB } from "../../../infrastructure/db";
 import { brandScoreHistory } from "../../../infrastructure/db/schema";
-import { BrandRepo } from "../../../domain/brands";
+import { BrandService } from "../../../domain/brands";
 
 export async function OverviewTab(args: Readonly<{ db: DB; brandId: number }>): Promise<string> {
-  const repo = new BrandRepo(args.db);
+  const repo = new BrandService(args.db);
   const brand = await repo.findById(args.brandId);
   const [latest] = await args.db
     .select()

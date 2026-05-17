@@ -4,7 +4,7 @@ import { brands, brandSources } from "../../infrastructure/db/schema";
 import { brandSlugFromName, resolveSlugCollision } from "./slug";
 import { NewBrandInputSchema, NewBrandSourceInputSchema } from "./types";
 
-export class BrandRepo {
+export class BrandService {
   constructor(private readonly db: DB) {}
 
   async list() {
@@ -41,7 +41,7 @@ export class BrandRepo {
   }
 }
 
-export class BrandSourceRepo {
+export class BrandSourceService {
   constructor(private readonly db: DB) {}
 
   async listForBrand(brandId: number) {

@@ -1,12 +1,12 @@
 import { runMigrations } from "../src/infrastructure/db/migrate";
 import { getDb } from "../src/infrastructure/db";
-import { BrandRepo, BrandSourceRepo } from "../src/domain/brands";
+import { BrandService, BrandSourceService } from "../src/domain/brands";
 import type { brands, brandSources } from "../src/infrastructure/db/schema";
 
 runMigrations();
 const db = getDb();
-const brandRepo = new BrandRepo(db);
-const sourceRepo = new BrandSourceRepo(db);
+const brandRepo = new BrandService(db);
+const sourceRepo = new BrandSourceService(db);
 
 type Seed = Pick<typeof brands.$inferInsert, "name" | "primaryUrl"> & {
   sizeChartUrl: typeof brandSources.$inferInsert.url;
