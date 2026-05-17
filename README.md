@@ -48,6 +48,32 @@ See the design spec: `docs/superpowers/specs/2026-05-16-brand-scan-design.md`.
 
 Phase 1 plan: `docs/superpowers/plans/2026-05-16-brand-scan-phase-1.md`.
 
+## Phase 2 (catalogs + tier-aware scoring)
+
+The brand-scan service now tracks per-brand product catalogs and computes tier-aware inclusivity scores.
+
+### What phase 2 adds
+
+- **Catalog discovery:** Shopify-first (`/products.json`), sitemap fallback. Discovered items land in `brand_items` with first-seen/last-verified timestamps.
+- **Catalog change detection:** items not present in a refresh are marked `is_discontinued`; new items log an `added` event.
+- **Tier classification:** price-percentile heuristic + AI refinement gate (`ENABLE_AI_TIER_REFINE=1` to enable AI). Human overrides via admin UI override the auto-classification.
+- **Three new scoring dimensions** complete the inclusivity composite:
+  - `range_parity` — category parity + tier parity (the "do bigger runners get flagship gear" measure)
+  - `pricing_equity` — same-item price comparison across standard vs extended sizes
+  - `colorway_equity` — colorway overlap across standard vs extended sizes
+- **Public API:** `GET /api/v1/brands/:slug/items` for the blog to render catalog views
+- **Adaptive cadence:** the `compute-brand-cadence` job sets `brands.predicted_next_change_at` based on observed change intervals
+
+### New cron schedules
+
+- `sweep-all-brand-catalogs` — monthly, 1st @ 04:00 UTC
+- `classify-item-tiers-daily` — daily @ 06:00 UTC
+- `compute-brand-cadence` — weekly Mondays @ 05:00 UTC
+
+### Optional env vars
+
+- `ENABLE_AI_TIER_REFINE=1` — enable Claude Haiku tier refinement after the price-percentile heuristic. Adds ~$0.001 per item classified. Default off.
+
 ## Module boundaries
 
 Enforced by `dependency-cruiser` (run `bun run arch`):
