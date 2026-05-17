@@ -63,6 +63,13 @@ Output a single JSON object with keys:
 - per_field_confidence (optional): map of size label → 0.0–1.0
 - what_i_saw: one short paragraph for the human reviewer describing what's on the page
 
+The canonical shape:
+- size_labels: ordered array of size names as the brand displays them (e.g., ["XS","S","M","L","XL","2XL"])
+- measurements: per-size body measurements in INCHES, keyed by label. Each entry is { chest_in, waist_in, hip_in } where each value is a [min, max] tuple.
+- size_availability: which sizes are ACTUALLY OFFERED PER PRODUCT CATEGORY. This often differs from the master chart: a brand may list 2XL on the chart but only stock it for shorts and tees, not jackets. Each entry is { category, available_sizes[] }. If the page doesn't disclose this, return an empty array.
+- notes: free-form notes for human reviewers (e.g., "men's chart only", "metric on page, converted to inches").
+- gender_specific: false | "men" | "women" | "unisex" — based on chart context.
+
 If the page lists separate men's/women's charts, return ONLY the chart matching the prior accepted version's gender_specific value (or men's if no prior). Note this in what_i_saw.
 
 If you cannot confidently extract a chart, return overall_confidence < 0.3 and explain in what_i_saw.
