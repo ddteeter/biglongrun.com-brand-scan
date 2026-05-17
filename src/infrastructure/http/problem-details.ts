@@ -16,9 +16,9 @@ export function problemDetailsResponse(p: ProblemDetails): Response {
 }
 
 export const ProblemTypes = {
-  Unauthorized: "https://brand-scan/problem/unauthorized",
-  NotFound: "https://brand-scan/problem/not-found",
-  ValidationError: "https://brand-scan/problem/validation-error",
-  RateLimited: "https://brand-scan/problem/rate-limited",
-  Internal: "https://brand-scan/problem/internal",
+  Unauthorized: "https://brand-scan.biglongrun.com/problem/unauthorized",
+  NotFound: "https://brand-scan.biglongrun.com/problem/not-found",
+  ValidationError: "https://brand-scan.biglongrun.com/problem/validation-error",
+  RateLimited: "https://brand-scan.biglongrun.com/problem/rate-limited",
+  Internal: "https://brand-scan.biglongrun.com/problem/internal",
 } as const;
