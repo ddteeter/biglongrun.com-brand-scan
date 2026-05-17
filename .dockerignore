@@ -1,0 +1,16 @@
+node_modules
+tmp
+.env
+.env.local
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+.git
+.github
+playwright-report
+test-results
+coverage
+dist
+docs
+tests/e2e
