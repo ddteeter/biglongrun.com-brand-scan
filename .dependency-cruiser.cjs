@@ -54,8 +54,11 @@ module.exports = {
     {
       name: "no-deep-imports-across-modules",
       severity: "error",
-      comment: "Cross-module imports must go through the module's index.ts barrel.",
-      from: { path: "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+" },
+      comment: "Cross-module imports must go through the module's index.ts barrel. Barrel files themselves are exempt — they exist to re-export their siblings.",
+      from: {
+        path: "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+",
+        pathNot: "/index\\.ts$"
+      },
       to: {
         path: "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+/.+",
         pathNot: "/index\\.ts$"
