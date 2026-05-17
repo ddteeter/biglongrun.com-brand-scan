@@ -4,7 +4,11 @@ import type { DB } from "../../infrastructure/db";
 import { brandSources, brandSizeChartVersions, brands } from "../../infrastructure/db/schema";
 import type { FirecrawlClient } from "../../infrastructure/external/firecrawl";
 import type { AnthropicClient } from "../../infrastructure/external/anthropic";
-import { DomainRateLimiter } from "../../infrastructure/external";
+import {
+  DomainRateLimiter,
+  estimateAnthropicCost,
+  MODEL_SONNET,
+} from "../../infrastructure/external";
 import { parseDeterministic } from "./parser-deterministic";
 import { extractWithClaude } from "./extractor-claude";
 import { validateStructural } from "./validators";
@@ -223,7 +227,7 @@ async function tieredExtraction(
       provider: "anthropic",
       unitsUsed: result.usage.inputTokens + result.usage.outputTokens,
       unitsKind: "tokens",
-      estimatedCostUsd: (result.usage.inputTokens * 3 + result.usage.outputTokens * 15) / 1_000_000,
+      estimatedCostUsd: estimateAnthropicCost(result.usage, MODEL_SONNET),
       runId,
     });
   }
