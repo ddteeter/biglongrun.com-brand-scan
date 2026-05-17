@@ -7,6 +7,8 @@ import { makeExtractBrandSourceHandler } from "./extract-brand-source";
 import { makeDetectBrandSourceChangesHandler } from "./detect-brand-source-changes";
 import { makeSweepAllBrandSourcesHandler } from "./sweep-all-brand-sources";
 import { makeDetectStuckJobsHandler } from "./detect-stuck-jobs";
+import { makeScoreBrandHandler } from "./score-brand";
+import { makeRecomputeCohortSummaryHandler } from "./recompute-cohort-summary";
 
 export interface RegisterJobsArgs {
   db: DB;
@@ -36,5 +38,10 @@ export function registerJobs(args: RegisterJobsArgs): void {
   registerHandler(
     "detect-stuck-jobs",
     makeDetectStuckJobsHandler({ db: args.db, pushover: args.pushover })
+  );
+  registerHandler("score-brand", makeScoreBrandHandler({ db: args.db }));
+  registerHandler(
+    "recompute-cohort-summary",
+    makeRecomputeCohortSummaryHandler({ db: args.db, queue: args.queue })
   );
 }
