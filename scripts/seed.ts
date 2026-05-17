@@ -1,28 +1,37 @@
 import { runMigrations } from "../src/infrastructure/db/migrate";
 import { getDb } from "../src/infrastructure/db";
 import { BrandRepo, BrandSourceRepo } from "../src/domain/brands";
+import type { brands, brandSources } from "../src/infrastructure/db/schema";
 
 runMigrations();
 const db = getDb();
-const brands = new BrandRepo(db);
-const sources = new BrandSourceRepo(db);
+const brandRepo = new BrandRepo(db);
+const sourceRepo = new BrandSourceRepo(db);
 
-const seeds: { name: string; url: string; sizeUrl: string }[] = [
+type Seed = Pick<typeof brands.$inferInsert, "name" | "primaryUrl"> & {
+  sizeChartUrl: typeof brandSources.$inferInsert.url;
+};
+
+const seeds: Seed[] = [
   {
     name: "Tracksmith",
-    url: "https://tracksmith.com",
-    sizeUrl: "https://tracksmith.com/pages/size-chart",
+    primaryUrl: "https://tracksmith.com",
+    sizeChartUrl: "https://tracksmith.com/pages/size-chart",
   },
   {
     name: "Path Projects",
-    url: "https://pathprojects.com",
-    sizeUrl: "https://pathprojects.com/pages/size-chart",
+    primaryUrl: "https://pathprojects.com",
+    sizeChartUrl: "https://pathprojects.com/pages/size-chart",
   },
-  { name: "Janji", url: "https://janji.com", sizeUrl: "https://janji.com/pages/size-chart" },
+  {
+    name: "Janji",
+    primaryUrl: "https://janji.com",
+    sizeChartUrl: "https://janji.com/pages/size-chart",
+  },
 ];
 
 for (const s of seeds) {
-  const created = await brands.create({ name: s.name, primaryUrl: s.url });
-  await sources.create({ brandId: created.id, url: s.sizeUrl, sourceType: "size_chart" });
+  const created = await brandRepo.create({ name: s.name, primaryUrl: s.primaryUrl });
+  await sourceRepo.create({ brandId: created.id, url: s.sizeChartUrl, sourceType: "size_chart" });
   console.log(`seeded ${created.slug}`);
 }
