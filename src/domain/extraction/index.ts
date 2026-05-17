@@ -7,3 +7,4 @@ export {
   type ExtractInput,
   type ExtractOutput,
 } from "./extractor-claude";
+export { compositeConfidence, type ConfidenceInputs, type ConfidenceResult } from "./confidence";
