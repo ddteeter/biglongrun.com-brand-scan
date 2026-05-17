@@ -87,23 +87,23 @@ It runs as a separate service from the [biglongrun.com](https://biglongrun.com) 
 
 ## 4. Stack & Key Decisions
 
-| Concern | Choice | Rationale |
-|---|---|---|
-| Runtime | **Bun** (latest 1.x) | Native TypeScript, `bun:sqlite` is the best SQLite story, fast startup, native cron. |
-| HTTP framework | **Elysia** | Bun-native, end-to-end type safety via Eden, ergonomic plugin system. |
-| Templates | **Server-rendered JSX** | No client bundle, no hydration. |
-| Interactivity | **HTMX** | Editorial workflows are forms + tables; HTMX's request/swap model fits perfectly with ~5% of the complexity of a SPA. |
-| Database | **SQLite** via `bun:sqlite` | Built-in to Bun, no native compilation, WAL mode, fast. Single-host appropriate for this scale. |
-| ORM | **Drizzle** | Type-safe queries, schema-in-TS, migrations via `drizzle-kit`. |
-| Styling | **Pico.css** | Classless defaults handle 90% of admin UI styling; minimal overrides. |
-| Auth | Single password → `Bun.password` hash + signed session cookie | Single-user; no users table needed. |
-| Notifications | **Pushover** | User already has an account; simple HTTP POST. |
-| Validation | **Zod** | Drives Drizzle schema → validator parity; runtime validation at API boundaries. |
-| Fetcher (paid) | **Firecrawl** | Handles JS rendering, anti-bot, screenshots. Free tier (1000 pages/month) covers our volume. |
-| Extraction LLM | **Anthropic Claude Sonnet 4.6** | Best price/quality balance for structured extraction with vision. |
-| Diff/classification LLM | **Anthropic Claude Haiku 4.5** | Cheap for trivial classification (e.g., email signal classification, tier inference). |
-| Logging | **Pino** → stdout → Dokploy | Structured JSON; no external APM needed. |
-| Backups | **Dokploy's built-in volume backup → Cloudflare R2** | Already configured by user. |
+| Concern                 | Choice                                                        | Rationale                                                                                                             |
+| ----------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Runtime                 | **Bun** (latest 1.x)                                          | Native TypeScript, `bun:sqlite` is the best SQLite story, fast startup, native cron.                                  |
+| HTTP framework          | **Elysia**                                                    | Bun-native, end-to-end type safety via Eden, ergonomic plugin system.                                                 |
+| Templates               | **Server-rendered JSX**                                       | No client bundle, no hydration.                                                                                       |
+| Interactivity           | **HTMX**                                                      | Editorial workflows are forms + tables; HTMX's request/swap model fits perfectly with ~5% of the complexity of a SPA. |
+| Database                | **SQLite** via `bun:sqlite`                                   | Built-in to Bun, no native compilation, WAL mode, fast. Single-host appropriate for this scale.                       |
+| ORM                     | **Drizzle**                                                   | Type-safe queries, schema-in-TS, migrations via `drizzle-kit`.                                                        |
+| Styling                 | **Pico.css**                                                  | Classless defaults handle 90% of admin UI styling; minimal overrides.                                                 |
+| Auth                    | Single password → `Bun.password` hash + signed session cookie | Single-user; no users table needed.                                                                                   |
+| Notifications           | **Pushover**                                                  | User already has an account; simple HTTP POST.                                                                        |
+| Validation              | **Zod**                                                       | Drives Drizzle schema → validator parity; runtime validation at API boundaries.                                       |
+| Fetcher (paid)          | **Firecrawl**                                                 | Handles JS rendering, anti-bot, screenshots. Free tier (1000 pages/month) covers our volume.                          |
+| Extraction LLM          | **Anthropic Claude Sonnet 4.6**                               | Best price/quality balance for structured extraction with vision.                                                     |
+| Diff/classification LLM | **Anthropic Claude Haiku 4.5**                                | Cheap for trivial classification (e.g., email signal classification, tier inference).                                 |
+| Logging                 | **Pino** → stdout → Dokploy                                   | Structured JSON; no external APM needed.                                                                              |
+| Backups                 | **Dokploy's built-in volume backup → Cloudflare R2**          | Already configured by user.                                                                                           |
 
 ### Decisions explicitly rejected (with reasons)
 
@@ -460,17 +460,17 @@ End-to-end flow for a single source URL.
 
 ### 6.3 Extraction job types
 
-| Job | When triggered | What it does |
-|---|---|---|
-| `extract-brand-source` | Cron sweep or manual admin trigger | One source URL → version row (above flow) |
-| `detect-brand-source-changes` | Cron, all active brands | Runs cheap-first check per source; enqueues `extract-brand-source` only if changed |
-| `sweep-all-brand-sources` | Monthly cron | Enqueues `detect-brand-source-changes` per active brand |
-| `compute-brand-cadence` | Weekly cron, phase 2 | Computes `predicted_next_change_at` per brand from change history |
-| `discover-brand-catalog` | Monthly cron, phase 2 | Shopify-first / sitemap fallback per brand |
-| `recompute-cohort-summary` | Weekly cron or after N new accepted versions | Rebuilds `cohort_summaries`, enqueues `score-brand` for affected brands |
-| `score-brand` | After new accepted version, or new cohort summary | Computes scores, appends `brand_score_history`, runs snapshot promotion |
-| `detect-stuck-jobs` | Every minute | Resets `running` jobs with stale heartbeats |
-| `backfill-blog-assessments` | Manual CLI invocation only (one-shot) | Parses blog repo path, inserts historical sizeOptions into author_brand_assessments |
+| Job                           | When triggered                                    | What it does                                                                        |
+| ----------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `extract-brand-source`        | Cron sweep or manual admin trigger                | One source URL → version row (above flow)                                           |
+| `detect-brand-source-changes` | Cron, all active brands                           | Runs cheap-first check per source; enqueues `extract-brand-source` only if changed  |
+| `sweep-all-brand-sources`     | Monthly cron                                      | Enqueues `detect-brand-source-changes` per active brand                             |
+| `compute-brand-cadence`       | Weekly cron, phase 2                              | Computes `predicted_next_change_at` per brand from change history                   |
+| `discover-brand-catalog`      | Monthly cron, phase 2                             | Shopify-first / sitemap fallback per brand                                          |
+| `recompute-cohort-summary`    | Weekly cron or after N new accepted versions      | Rebuilds `cohort_summaries`, enqueues `score-brand` for affected brands             |
+| `score-brand`                 | After new accepted version, or new cohort summary | Computes scores, appends `brand_score_history`, runs snapshot promotion             |
+| `detect-stuck-jobs`           | Every minute                                      | Resets `running` jobs with stale heartbeats                                         |
+| `backfill-blog-assessments`   | Manual CLI invocation only (one-shot)             | Parses blog repo path, inserts historical sizeOptions into author_brand_assessments |
 
 ### 6.4 Error handling
 
@@ -497,13 +497,13 @@ Because raw Firecrawl outputs (markdown + screenshot) are preserved in `run_arti
 
 ### 7.1 Five dimensions
 
-| Dimension | What it measures | Phase |
-|---|---|---|
-| `size_range_breadth` | Smallest → largest size label offered, normalized against the cohort breadth distribution | 1 |
-| `measurement_accuracy` | Mean absolute deviation of brand measurements from cohort median per size label, normalized | 1 |
-| `range_parity` | Two sub-scores averaged: **category parity** (extended sizes across all categories) + **tier parity** (extended sizes in flagship items, not just basics) | 2 |
-| `pricing_equity` | Brand's max-size price multiple vs. cohort baseline | 2 |
-| `colorway_equity` | Brand's colorway count ratio (extended : standard) vs. cohort baseline | 2 |
+| Dimension              | What it measures                                                                                                                                          | Phase |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| `size_range_breadth`   | Smallest → largest size label offered, normalized against the cohort breadth distribution                                                                 | 1     |
+| `measurement_accuracy` | Mean absolute deviation of brand measurements from cohort median per size label, normalized                                                               | 1     |
+| `range_parity`         | Two sub-scores averaged: **category parity** (extended sizes across all categories) + **tier parity** (extended sizes in flagship items, not just basics) | 2     |
+| `pricing_equity`       | Brand's max-size price multiple vs. cohort baseline                                                                                                       | 2     |
+| `colorway_equity`      | Brand's colorway count ratio (extended : standard) vs. cohort baseline                                                                                    | 2     |
 
 All five are computed **deterministically** from stored inputs. AI is in the extraction layer only.
 
@@ -563,10 +563,10 @@ If divergence > 2.0 points:
 export const SCORING_CONFIG_VERSION = "v1.0";
 export const WEIGHTS = {
   size_range_breadth: 0.25,
-  measurement_accuracy: 0.20,
-  range_parity: 0.30,      // 0.00 in phase 1
-  pricing_equity: 0.15,    // 0.00 in phase 1
-  colorway_equity: 0.10,   // 0.00 in phase 1
+  measurement_accuracy: 0.2,
+  range_parity: 0.3, // 0.00 in phase 1
+  pricing_equity: 0.15, // 0.00 in phase 1
+  colorway_equity: 0.1, // 0.00 in phase 1
 };
 export const SNAPSHOT_PROMOTION_DELTA = 0.5;
 export const MIN_COHORT_SIZE_FOR_PUBLIC = 5;
@@ -588,6 +588,7 @@ Server-rendered JSX + HTMX + Pico. Single-user, single-password session.
 **`/admin/login`** — single password field, `Bun.password.verify`, HTTP-only signed session cookie.
 
 **`/admin`** (dashboard) — at-a-glance card grid:
+
 - Brands tracked (N), brands with current size chart (M), brands stale > 90 days (K)
 - **Pending review queue size** (prominent, link)
 - Recent runs (last 10, with status pills)
@@ -597,6 +598,7 @@ Server-rendered JSX + HTMX + Pico. Single-user, single-password session.
 **`/admin/brands`** — sortable filterable table: name, category, score, last_change, next_predicted_change, cadence. "Add brand" modal: name + primary URL → creates brand + first BrandSource → enqueues first extraction.
 
 **`/admin/brands/:slug`** — header with name/URL/category/scores/divergence flag. HTMX-loaded tabs:
+
 - **Overview** — current scores, cohort context, last update
 - **Sources** — list of BrandSources; add/edit/delete; per-source cadence override
 - **Size chart** — current accepted size chart + version history timeline; click a version to view full JSON + screenshot
@@ -606,6 +608,7 @@ Server-rendered JSX + HTMX + Pico. Single-user, single-password session.
 - **Runs** — recent extraction runs for this brand with status + artifact links
 
 **`/admin/queue`** — the heart of editorial workflow. Filter by low-confidence / large-delta / both. Per-item two-column layout:
+
 - Left: screenshot from Firecrawl (+ "View rendered HTML" link)
 - Right: extracted JSON in an editor (CodeMirror or `<textarea>` + monospace)
 - Below: cohort reference values per size (e.g., "this brand says XL waist=32" vs "cohort median XL waist=35")
@@ -734,6 +737,7 @@ ANTHROPIC_MONTHLY_USD_BUDGET = 10      # Anthropic console cap is the hard ceili
 ```
 
 Layered protection:
+
 1. `api_usage_log` tracking row written on every external call.
 2. **Soft alert at 75% of budget** → Pushover.
 3. **Hard circuit breaker at 100%** → jobs that would hit capped provider get postponed (return to `pending` with next-month `scheduled_for`). Read API stays up.
@@ -787,13 +791,14 @@ Managed entirely by Dokploy's built-in volume backup to Cloudflare R2 (already c
 
 ### 11.3 Testing levels
 
-| Level | Tool | Coverage |
-|---|---|---|
-| **Unit** | `bun test` | Pure functions: scoring math, validators, parsers, slug generation, confidence composition |
-| **Integration** | `bun test` + in-memory `bun:sqlite` + mocked external clients | Domain modules end-to-end: extraction pipeline against fake Firecrawl/Claude, scoring against seeded DB, HTTP API routes via Elysia's test client |
-| **End-to-end UI** | **Playwright** | Critical admin workflows in a real browser |
+| Level             | Tool                                                          | Coverage                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Unit**          | `bun test`                                                    | Pure functions: scoring math, validators, parsers, slug generation, confidence composition                                                        |
+| **Integration**   | `bun test` + in-memory `bun:sqlite` + mocked external clients | Domain modules end-to-end: extraction pipeline against fake Firecrawl/Claude, scoring against seeded DB, HTTP API routes via Elysia's test client |
+| **End-to-end UI** | **Playwright**                                                | Critical admin workflows in a real browser                                                                                                        |
 
 **E2E flows (capped intentionally):**
+
 1. Login → dashboard renders
 2. Add a brand → first extraction job appears in queue
 3. Queue: approve item → next item loads, DB row status transitions
@@ -802,10 +807,12 @@ Managed entirely by Dokploy's built-in volume backup to Cloudflare R2 (already c
 6. Markdown editor: live preview updates on input
 
 **CI placement:**
+
 - PR CI: typecheck, lint, dependency-cruiser, unit + integration. < 2 min, blocks merge.
 - Post-merge / pre-deploy CI: above + Playwright E2E. ~10 min total. Runs after merge to `main`, before Dokploy promotion.
 
 **Test fixtures:**
+
 - `tests/fixtures/firecrawl-responses/` — realistic Firecrawl response samples (markdown + screenshot PNGs) for ~5 representative brands.
 - `tests/fixtures/claude-responses/` — canonical extracted JSON for those samples.
 - Integration tests replay these against real extraction code; E2E uses a stubbed API server returning these.
@@ -884,6 +891,7 @@ The brand index becomes self-feeding.
 **Concept:** invert polling. Subscribe brand-scan to brand newsletters; react when brands tell us new things exist.
 
 **Implementation sketch:**
+
 - Dedicated email address (e.g., `brand-scan-bot@<domain>`)
 - Subscribe to brand newsletters from indexed brands
 - Inbound email via Postmark or SendGrid Inbound Parse → webhook into brand-scan
@@ -907,6 +915,7 @@ To file once the GitHub issue tracker is set up for this repo:
 > Brands push new launches to their mailing lists. Currently we discover changes by periodic scraping; subscribing to brand newsletters would let us react when they tell us directly, dramatically improving signal-to-noise and reducing unnecessary Firecrawl pages.
 >
 > **Proposed implementation:**
+>
 > - Dedicated email address (`brand-scan-bot@<domain>`)
 > - Subscribe to mailing lists for indexed brands; track subscription status in a `brand_email_subscriptions` table
 > - Inbound email pipeline (Postmark Inbound Parse / SendGrid Inbound Parse / similar) posts emails to a webhook on brand-scan
@@ -914,6 +923,7 @@ To file once the GitHub issue tracker is set up for this repo:
 > - On `new_launch` or `restock` → enqueue immediate sweep for matched brand
 >
 > **Open questions:**
+>
 > - Email-receiving provider choice + cost
 > - Brand-matching from email From: header (alias vs. canonical brand domain)
 > - How to handle unsubscribe / list churn
@@ -927,25 +937,25 @@ To file once the GitHub issue tracker is set up for this repo:
 
 Decisions made during brainstorming, with alternates considered and reasons rejected.
 
-| Decision | Chosen | Rejected alternates |
-|---|---|---|
-| Service shape | One Bun process, SQLite-backed job queue, in-process worker | Two-process API+worker (overkill at scale); in-memory queue (loses jobs on restart) |
-| Storage | SQLite via `bun:sqlite` on Dokploy volume | Postgres (overkill); flat YAML files in git (no relational data fit) |
-| Data ownership | brand-scan canonical for ALL brand-level data (objective + subjective + prose) | Blog owns subjective ratings, brand-scan owns only objective (rejected because `sizeOptions` is a brand-level property miscategorized in blog reviews) |
-| HTTP framework | Elysia (Bun-native, Eden type safety) | Hono (more portable but no Bun-specific benefits at our deployment shape); Astro (wrong shape for an editorial admin tool) |
-| UI approach | Server-rendered JSX + HTMX | SPA (overkill); CLI-only (image review terrible in terminal); GitHub-issue-driven (side-by-side image+JSON review painful in GH) |
-| Styling | Pico.css (minimal overrides) | Tailwind (overkill for single-user tool) |
-| Extraction fetcher | Firecrawl (free tier) | Self-hosted Playwright (anti-bot fights + 300MB container bloat); tiered hand-rolled fetcher (premature) |
-| Extraction LLM | Claude Sonnet 4.6 + (Haiku 4.5 for cheap diffs) | Firecrawl `/extract` endpoint (loses calibration context, pays same LLM tax through their margin) |
-| Reference standard for scoring | Cohort-derived (peer brands) | ASTM D5585/D6960 (~$50–100 per standard, less honest for niche cohort anyway) |
-| Brand discovery | Manual + 3 seed importers, Reddit phase 2 vision | Full IG/TikTok suite (out of scope) |
-| Catalog discovery | Shopify-first, sitemap fallback | Universal category-page crawling (brittle); AI-guided walker (drifts on redesigns) |
-| Item versioning | `brand_items` (current state) + `brand_item_changes` (append-only log) | Full item versioning (heavy; items rarely change post-launch) |
-| Score timeline | `brand_score_history` (every) + `brand_score_snapshots` (smoothed) | Single table (creates churn on noise) |
-| Backups | Dokploy-managed → Cloudflare R2 | Litestream sidecar (Dokploy already handles this); local volume only (no DR) |
-| Deployment | Dokploy git deploy with PR CI gating | Image-registry-pull (more pieces, no benefit); manual CLI deploy (friction) |
-| Blog integration | One-shot CLI for sizeOptions backfill; no ongoing pull | Ongoing git-pull-and-parse (unnecessary once brand-scan is authoritative) |
-| Cadence | Monthly default, adaptive learning later | Daily (excessive); biweekly (still excessive for the actual change rate) |
-| Robots.txt | Pragmatic + per-domain rate limiting | Strict enforcement (would block too many brands; we read like a human researcher) |
-| Module enforcement | dependency-cruiser | ts-arch (more expressive but more code; dep-cruiser config is more agent-readable); eslint-plugin-boundaries (less expressive) |
-| E2E testing | Playwright (real browser, 6 capped critical flows) | jsdom/happy-dom (HTMX needs real browser); no E2E (queue UX would silently regress) |
+| Decision                       | Chosen                                                                         | Rejected alternates                                                                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Service shape                  | One Bun process, SQLite-backed job queue, in-process worker                    | Two-process API+worker (overkill at scale); in-memory queue (loses jobs on restart)                                                                    |
+| Storage                        | SQLite via `bun:sqlite` on Dokploy volume                                      | Postgres (overkill); flat YAML files in git (no relational data fit)                                                                                   |
+| Data ownership                 | brand-scan canonical for ALL brand-level data (objective + subjective + prose) | Blog owns subjective ratings, brand-scan owns only objective (rejected because `sizeOptions` is a brand-level property miscategorized in blog reviews) |
+| HTTP framework                 | Elysia (Bun-native, Eden type safety)                                          | Hono (more portable but no Bun-specific benefits at our deployment shape); Astro (wrong shape for an editorial admin tool)                             |
+| UI approach                    | Server-rendered JSX + HTMX                                                     | SPA (overkill); CLI-only (image review terrible in terminal); GitHub-issue-driven (side-by-side image+JSON review painful in GH)                       |
+| Styling                        | Pico.css (minimal overrides)                                                   | Tailwind (overkill for single-user tool)                                                                                                               |
+| Extraction fetcher             | Firecrawl (free tier)                                                          | Self-hosted Playwright (anti-bot fights + 300MB container bloat); tiered hand-rolled fetcher (premature)                                               |
+| Extraction LLM                 | Claude Sonnet 4.6 + (Haiku 4.5 for cheap diffs)                                | Firecrawl `/extract` endpoint (loses calibration context, pays same LLM tax through their margin)                                                      |
+| Reference standard for scoring | Cohort-derived (peer brands)                                                   | ASTM D5585/D6960 (~$50–100 per standard, less honest for niche cohort anyway)                                                                          |
+| Brand discovery                | Manual + 3 seed importers, Reddit phase 2 vision                               | Full IG/TikTok suite (out of scope)                                                                                                                    |
+| Catalog discovery              | Shopify-first, sitemap fallback                                                | Universal category-page crawling (brittle); AI-guided walker (drifts on redesigns)                                                                     |
+| Item versioning                | `brand_items` (current state) + `brand_item_changes` (append-only log)         | Full item versioning (heavy; items rarely change post-launch)                                                                                          |
+| Score timeline                 | `brand_score_history` (every) + `brand_score_snapshots` (smoothed)             | Single table (creates churn on noise)                                                                                                                  |
+| Backups                        | Dokploy-managed → Cloudflare R2                                                | Litestream sidecar (Dokploy already handles this); local volume only (no DR)                                                                           |
+| Deployment                     | Dokploy git deploy with PR CI gating                                           | Image-registry-pull (more pieces, no benefit); manual CLI deploy (friction)                                                                            |
+| Blog integration               | One-shot CLI for sizeOptions backfill; no ongoing pull                         | Ongoing git-pull-and-parse (unnecessary once brand-scan is authoritative)                                                                              |
+| Cadence                        | Monthly default, adaptive learning later                                       | Daily (excessive); biweekly (still excessive for the actual change rate)                                                                               |
+| Robots.txt                     | Pragmatic + per-domain rate limiting                                           | Strict enforcement (would block too many brands; we read like a human researcher)                                                                      |
+| Module enforcement             | dependency-cruiser                                                             | ts-arch (more expressive but more code; dep-cruiser config is more agent-readable); eslint-plugin-boundaries (less expressive)                         |
+| E2E testing                    | Playwright (real browser, 6 capped critical flows)                             | jsdom/happy-dom (HTMX needs real browser); no E2E (queue UX would silently regress)                                                                    |
