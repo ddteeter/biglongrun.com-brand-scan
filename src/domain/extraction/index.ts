@@ -8,3 +8,11 @@ export {
   type ExtractOutput,
 } from "./extractor-claude";
 export { compositeConfidence, type ConfidenceInputs, type ConfidenceResult } from "./confidence";
+export { cohortOutlierFactor, type CohortSummary } from "./outlier";
+export { assemblePriorContext } from "./prior-context";
+export {
+  runExtraction,
+  type PipelineDeps,
+  type PipelineInput,
+  type PipelineOutcome,
+} from "./pipeline";
