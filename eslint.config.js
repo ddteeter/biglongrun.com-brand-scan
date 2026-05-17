@@ -15,6 +15,7 @@ export default defineConfig(
       "playwright-report/",
       "test-results/",
       "coverage/",
+      ".dependency-cruiser.cjs",
     ],
   },
   js.configs.recommended,

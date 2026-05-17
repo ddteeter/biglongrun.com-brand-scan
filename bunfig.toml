@@ -2,4 +2,4 @@
 exact = true
 
 [test]
-preload = []
+preload = [""]
