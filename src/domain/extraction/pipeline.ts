@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
-import { brandSources, brandSizeChartVersions, brands } from "../../infrastructure/db/schema";
+import { brandSources, brands } from "../../infrastructure/db/schema";
 import type { FirecrawlClient } from "../../infrastructure/external/firecrawl";
 import type { AnthropicClient } from "../../infrastructure/external/anthropic";
 import {
@@ -16,6 +16,7 @@ import { compositeConfidence } from "./confidence";
 import { cohortOutlierFactor, type CohortSummary } from "./outlier";
 import { assemblePriorContext } from "./prior-context";
 import type { CanonicalSizeChart } from "./canonical";
+import { VersionService } from "./version-service";
 
 export interface PipelineDeps {
   db: DB;
@@ -241,74 +242,37 @@ async function persistAndRoute(
   conf: ReturnType<typeof compositeConfidence>,
   deltaCount: number,
   priorContext: Awaited<ReturnType<typeof assemblePriorContext>>,
-  nowIso: string,
-  _runId: number
+  _nowIso: string,
+  runId: number
 ): Promise<PipelineOutcome> {
   const status =
     conf.composite >= AUTO_ACCEPT_CONFIDENCE_THRESHOLD && deltaCount <= DELTA_LARGE_THRESHOLD
       ? "accepted"
       : "pending_review";
 
-  // Wrap all DB writes in a transaction so a partial failure doesn't leave the
-  // DB in an inconsistent state (e.g. version inserted but brand pointer stale).
-  // Network I/O (notifyPendingReview) happens OUTSIDE the transaction below.
-  const { version, brand } = await deps.db.transaction(async (tx) => {
-    const inserted = await tx
-      .insert(brandSizeChartVersions)
-      .values({
-        brandId: source.brandId,
-        brandSourceId: source.id,
-        sourceRunId: _runId,
-        sizeChartJson: chart as Record<string, unknown>,
-        confidenceScore: conf.composite,
-        confidenceBreakdownJson: conf.breakdown,
-        status,
-        acceptedAt: status === "accepted" ? nowIso : null,
-        acceptedBy: status === "accepted" ? "auto" : null,
-        supersedesVersionId: null,
-        deltaFromPriorJson: priorContext.lastAccepted ? { fieldsChanged: deltaCount } : null,
-      })
-      .returning();
-
-    const v = inserted[0];
-    if (!v) throw new Error("Failed to insert brand_size_chart_version");
-
-    if (status === "accepted") {
-      if (priorContext.lastAccepted) {
-        // Supersede all previously accepted versions (including the just-inserted row if it was
-        // already accepted), then re-mark the new row as accepted.
-        await tx
-          .update(brandSizeChartVersions)
-          .set({ status: "superseded" })
-          .where(
-            and(
-              eq(brandSizeChartVersions.brandId, source.brandId),
-              eq(brandSizeChartVersions.status, "accepted")
-            )
-          );
-        await tx
-          .update(brandSizeChartVersions)
-          .set({ status: "accepted" })
-          .where(eq(brandSizeChartVersions.id, v.id));
-      }
-      await tx
-        .update(brands)
-        .set({ currentSizeChartVersionId: v.id })
-        .where(eq(brands.id, source.brandId));
-    }
-
-    // Fetch brand for notification context (read inside tx so we see consistent state)
-    const [b] = await tx.select().from(brands).where(eq(brands.id, source.brandId)).limit(1);
-    if (!b) throw new Error(`brand not found: ${String(source.brandId)}`);
-
-    return { version: v, brand: b };
+  // Delegate multi-table transactional write to VersionService.
+  // Network I/O (notifyPendingReview) happens OUTSIDE the service call below.
+  const versionService = new VersionService(deps.db);
+  const version = await versionService.recordExtraction({
+    brandId: source.brandId,
+    brandSourceId: source.id,
+    runId,
+    chart,
+    confidence: conf,
+    deltaFromPrior: priorContext.lastAccepted ? { fieldsChanged: deltaCount } : null,
+    status,
+    acceptedBy: "auto",
   });
 
   if (status === "accepted") {
     return { kind: "auto_accepted", versionId: version.id };
   }
 
-  // pending_review: notify outside the transaction (no network I/O inside SQLite txn)
+  // pending_review: fetch brand for notification context (outside transaction)
+  const [brand] = await deps.db.select().from(brands).where(eq(brands.id, source.brandId)).limit(1);
+  if (!brand) throw new Error(`brand not found: ${String(source.brandId)}`);
+
+  // Notify outside the transaction (no network I/O inside SQLite txn)
   const reason =
     conf.composite < LOW_CONFIDENCE_THRESHOLD ? "low confidence" : "size chart materially changed";
   await deps.notifyPendingReview({
