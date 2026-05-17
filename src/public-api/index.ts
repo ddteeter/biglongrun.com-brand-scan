@@ -5,6 +5,7 @@ import { healthRoute } from "./health";
 import { brandsRoute } from "./brands";
 import { sizeChartsRoute } from "./size-charts";
 import { scoreHistoryRoute } from "./score-history";
+import { itemsRoute } from "./items";
 
 export interface PublicApiArgs {
   db: DB;
@@ -18,5 +19,6 @@ export function publicApi(args: PublicApiArgs): AnyElysia {
     .use(healthRoute({ db: args.db, bootedAt: args.bootedAt }))
     .use(brandsRoute({ db: args.db }))
     .use(sizeChartsRoute({ db: args.db }))
-    .use(scoreHistoryRoute({ db: args.db }));
+    .use(scoreHistoryRoute({ db: args.db }))
+    .use(itemsRoute({ db: args.db }));
 }
