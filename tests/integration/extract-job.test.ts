@@ -153,6 +153,14 @@ describe("extract-brand-source job end-to-end", () => {
       queue,
       artifactStore,
       pushover,
+      buildDiscoverDeps: () => ({
+        shopify: { tryFetch: () => Promise.resolve(null) } as never,
+        sitemap: { discover: () => Promise.resolve([]) } as never,
+        firecrawl,
+        anthropic,
+        rateLimiter,
+        recordUsage: () => Promise.resolve(),
+      }),
       buildPipelineDeps: () => ({
         db,
         firecrawl,

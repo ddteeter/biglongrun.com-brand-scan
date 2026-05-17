@@ -9,6 +9,7 @@ import { PushoverClient } from "./infrastructure/external/pushover";
 import { DomainRateLimiter } from "./infrastructure/external/rate-limiter";
 import { ArtifactStore } from "./infrastructure/artifacts";
 import { UsageTracker, CircuitBreaker } from "./domain/usage";
+import { ShopifyCatalogDiscoverer, SitemapCatalogDiscoverer } from "./domain/catalog";
 import { registerJobs } from "./jobs";
 import { buildApp } from "./server/app";
 
@@ -32,6 +33,8 @@ function boot(): void {
   });
   const rateLimiter = new DomainRateLimiter({ minIntervalMs: 30_000 });
   const usageTracker = new UsageTracker(db);
+  const shopify = new ShopifyCatalogDiscoverer();
+  const sitemap = new SitemapCatalogDiscoverer();
   const circuitBreaker = new CircuitBreaker(db, {
     firecrawlMonthlyPages: env.FIRECRAWL_MONTHLY_PAGE_BUDGET,
     anthropicMonthlyUsd: env.ANTHROPIC_MONTHLY_USD_BUDGET,
@@ -42,6 +45,14 @@ function boot(): void {
     queue,
     artifactStore,
     pushover,
+    buildDiscoverDeps: () => ({
+      shopify,
+      sitemap,
+      firecrawl,
+      anthropic,
+      rateLimiter,
+      recordUsage: (input) => usageTracker.record(input),
+    }),
     buildPipelineDeps: () => ({
       db,
       firecrawl,
