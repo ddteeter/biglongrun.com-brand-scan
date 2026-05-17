@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import * as schema from "../../src/infrastructure/db/schema";
 import { AdminAuth, requireAdminSession } from "../../src/infrastructure/http/auth-session";
 import { authActions } from "../../src/admin-ui/actions/auth";
@@ -22,7 +22,7 @@ function makeDb() {
 
 describe("admin auth", () => {
   const SECRET = "0".repeat(32);
-  let app: Elysia;
+  let app: AnyElysia;
   let auth: AdminAuth;
   let adminPasswordHash: string;
 

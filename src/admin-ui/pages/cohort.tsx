@@ -1,11 +1,11 @@
 import { Layout, renderHtml } from "../layout";
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { desc } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { cohortSummaries } from "../../infrastructure/db/schema";
 import type { Queue } from "../../infrastructure/queue";
 
-export function cohortRoute(args: Readonly<{ db: DB; queue: Queue }>): Elysia {
+export function cohortRoute(args: Readonly<{ db: DB; queue: Queue }>): AnyElysia {
   return new Elysia()
     .get("/admin/cohort", async () => {
       const [latest] = await args.db

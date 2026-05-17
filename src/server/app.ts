@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { staticPlugin } from "@elysiajs/static";
 import type { DB } from "../infrastructure/db";
 import type { Queue } from "../infrastructure/queue";
@@ -19,7 +19,7 @@ export interface AppArgs {
   bootedAt: Date;
 }
 
-export function buildApp(args: AppArgs): Elysia {
+export function buildApp(args: AppArgs): AnyElysia {
   return new Elysia()
     .use(staticPlugin({ assets: args.artifactsLocalPath, prefix: "/artifacts" }))
     .use(publicApi({ db: args.db, bearerToken: args.bearerToken, bootedAt: args.bootedAt }))

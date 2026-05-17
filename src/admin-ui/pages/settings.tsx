@@ -1,8 +1,8 @@
 import { Layout, renderHtml } from "../layout";
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { SCORING_CONFIG_VERSION, WEIGHTS } from "../../domain/scoring/config";
 
-export function settingsRoute(): Elysia {
+export function settingsRoute(): AnyElysia {
   return new Elysia().get("/admin/settings", () =>
     renderHtml(
       <Layout title="Settings" currentPath="/admin/settings">

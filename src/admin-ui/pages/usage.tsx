@@ -1,10 +1,10 @@
 import { Layout, renderHtml } from "../layout";
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { sql } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { apiUsageLog } from "../../infrastructure/db/schema";
 
-export function usageRoute(args: Readonly<{ db: DB }>): Elysia {
+export function usageRoute(args: Readonly<{ db: DB }>): AnyElysia {
   return new Elysia().get("/admin/usage", async () => {
     const monthStart = new Date();
     monthStart.setUTCDate(1);

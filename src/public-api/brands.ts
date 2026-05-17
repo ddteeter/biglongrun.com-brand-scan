@@ -1,11 +1,11 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { eq } from "drizzle-orm";
 import type { DB } from "../infrastructure/db";
 import { brands, brandSizeChartVersions } from "../infrastructure/db/schema";
 import { problemDetailsResponse, ProblemTypes } from "../infrastructure/http";
 import { jsonWithCaching } from "./response-helpers";
 
-export function brandsRoute(args: { db: DB }): Elysia {
+export function brandsRoute(args: { db: DB }): AnyElysia {
   return new Elysia()
     .get("/api/v1/brands", async ({ request }) => {
       const url = new URL(request.url);

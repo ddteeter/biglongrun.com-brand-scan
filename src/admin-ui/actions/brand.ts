@@ -1,8 +1,8 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { BrandRepo } from "../../domain/brands";
 import type { DB } from "../../infrastructure/db";
 
-export function brandActions(args: { db: DB }): Elysia {
+export function brandActions(args: { db: DB }): AnyElysia {
   const repo = new BrandRepo(args.db);
   return new Elysia().post("/admin/brands/create", async ({ request }) => {
     const form = await request.formData();

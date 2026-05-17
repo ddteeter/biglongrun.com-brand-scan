@@ -1,10 +1,10 @@
 import { Layout, renderHtml } from "../layout";
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { and, eq, desc } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { brandSizeChartVersions, brands, runArtifacts } from "../../infrastructure/db/schema";
 
-export function queueRoute(args: Readonly<{ db: DB; artifactsPublicBaseUrl: string }>): Elysia {
+export function queueRoute(args: Readonly<{ db: DB; artifactsPublicBaseUrl: string }>): AnyElysia {
   return new Elysia().get("/admin/queue", async ({ request }) => {
     const url = new URL(request.url);
     const filter = url.searchParams.get("filter") ?? "all";

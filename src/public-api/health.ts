@@ -1,9 +1,9 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { eq, count } from "drizzle-orm";
 import type { DB } from "../infrastructure/db";
 import { jobs } from "../infrastructure/db/schema";
 
-export function healthRoute(args: { db: DB; bootedAt: Date }): Elysia {
+export function healthRoute(args: { db: DB; bootedAt: Date }): AnyElysia {
   return new Elysia().get("/api/v1/health", async () => {
     let dbOk: boolean;
     let pendingCount: number;

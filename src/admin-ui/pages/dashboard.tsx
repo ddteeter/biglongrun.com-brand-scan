@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { count, desc, isNotNull, eq } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { brands, brandSizeChartVersions, runs } from "../../infrastructure/db/schema";
@@ -11,7 +11,7 @@ export interface DashboardArgs {
   circuitBreaker: CircuitBreaker;
 }
 
-export function dashboardRoute(args: DashboardArgs): Elysia {
+export function dashboardRoute(args: DashboardArgs): AnyElysia {
   return new Elysia().get("/admin", async () => {
     const [brandCountRow] = await args.db.select({ value: count() }).from(brands);
     const brandCount = brandCountRow?.value ?? 0;

@@ -1,9 +1,9 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { and, eq } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { brands, brandSizeChartVersions } from "../../infrastructure/db/schema";
 
-export function queueActions(args: Readonly<{ db: DB; authorSlug: string }>): Elysia {
+export function queueActions(args: Readonly<{ db: DB; authorSlug: string }>): AnyElysia {
   return new Elysia()
     .post("/admin/queue/:id/approve", async ({ params, request, set }) => {
       const id = Number(params.id);

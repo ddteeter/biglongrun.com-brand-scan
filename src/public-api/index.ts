@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import type { DB } from "../infrastructure/db";
 import { bearerAuth } from "../infrastructure/http";
 import { healthRoute } from "./health";
@@ -12,7 +12,7 @@ export interface PublicApiArgs {
   bootedAt: Date;
 }
 
-export function publicApi(args: PublicApiArgs): Elysia {
+export function publicApi(args: PublicApiArgs): AnyElysia {
   return new Elysia()
     .use(bearerAuth(args.bearerToken))
     .use(healthRoute({ db: args.db, bootedAt: args.bootedAt }))

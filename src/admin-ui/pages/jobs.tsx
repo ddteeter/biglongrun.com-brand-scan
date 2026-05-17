@@ -1,10 +1,10 @@
 import { Layout, renderHtml } from "../layout";
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { desc } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { jobs } from "../../infrastructure/db/schema";
 
-export function jobsRoute(args: Readonly<{ db: DB }>): Elysia {
+export function jobsRoute(args: Readonly<{ db: DB }>): AnyElysia {
   return new Elysia().get("/admin/jobs", async () => {
     const recent = await args.db.select().from(jobs).orderBy(desc(jobs.scheduledFor)).limit(100);
     return renderHtml(

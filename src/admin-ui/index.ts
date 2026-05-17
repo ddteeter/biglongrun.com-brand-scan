@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import type { DB } from "../infrastructure/db";
 import type { Queue } from "../infrastructure/queue";
 import type { CircuitBreaker } from "../domain/usage";
@@ -26,7 +26,7 @@ export interface AdminUiArgs {
   circuitBreaker: CircuitBreaker;
 }
 
-export function adminUi(args: AdminUiArgs): Elysia {
+export function adminUi(args: AdminUiArgs): AnyElysia {
   const auth = new AdminAuth(args.db, args.sessionSecret);
   return new Elysia()
     .use(authActions({ auth, adminPasswordHash: args.adminPasswordHash }))

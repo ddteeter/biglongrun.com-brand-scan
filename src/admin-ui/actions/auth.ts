@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { cookie } from "@elysiajs/cookie";
 import { serialize } from "cookie";
 import { AdminAuth } from "../../infrastructure/http/auth-session";
@@ -9,7 +9,7 @@ export interface AuthActionsArgs {
   adminPasswordHash: string;
 }
 
-export function authActions(args: AuthActionsArgs): Elysia {
+export function authActions(args: AuthActionsArgs): AnyElysia {
   return new Elysia()
     .use(cookie())
     .get(

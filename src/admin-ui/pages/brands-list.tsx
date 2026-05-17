@@ -1,10 +1,10 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import type { DB } from "../../infrastructure/db";
 import { brands } from "../../infrastructure/db/schema";
 import { Layout, renderHtml } from "../layout";
 import { TextInput } from "../components/form";
 
-export function brandsListRoute(args: { db: DB }): Elysia {
+export function brandsListRoute(args: { db: DB }): AnyElysia {
   return new Elysia().get("/admin/brands", async () => {
     const rows = await args.db.select().from(brands).orderBy(brands.name);
     return renderHtml(

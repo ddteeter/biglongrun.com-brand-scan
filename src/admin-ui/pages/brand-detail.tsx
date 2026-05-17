@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { eq } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { brands } from "../../infrastructure/db/schema";
@@ -12,7 +12,7 @@ import { RunsTab } from "./brand-tabs/runs";
 const TABS = ["overview", "sources", "size-chart", "score-history", "runs"] as const;
 type Tab = (typeof TABS)[number];
 
-export function brandDetailRoute(args: { db: DB }): Elysia {
+export function brandDetailRoute(args: { db: DB }): AnyElysia {
   return new Elysia().get("/admin/brands/:slug", async ({ params, request }) => {
     const url = new URL(request.url);
     const tabParam = url.searchParams.get("tab") ?? "overview";

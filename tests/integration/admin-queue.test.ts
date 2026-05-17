@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { eq } from "drizzle-orm";
 import * as schema from "../../src/infrastructure/db/schema";
 import { brands, brandSizeChartVersions } from "../../src/infrastructure/db/schema";
@@ -51,7 +51,7 @@ function makeDb() {
 
 describe("queueActions", () => {
   let db: ReturnType<typeof makeDb>;
-  let app: Elysia;
+  let app: AnyElysia;
 
   beforeEach(() => {
     db = makeDb();
