@@ -42,6 +42,7 @@
     "@anthropic-ai/sdk": "0.96.0",
     "@elysiajs/cookie": "0.8.0",
     "@elysiajs/html": "1.4.2",
+    "@elysiajs/static": "1.4.10",
     "@kitajs/html": "4.2.13",
     "croner": "10.0.1",
     "drizzle-orm": "0.45.2",

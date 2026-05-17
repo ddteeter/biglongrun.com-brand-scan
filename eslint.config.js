@@ -40,5 +40,16 @@ export default defineConfig(
       "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: false }],
     },
   },
+  {
+    // Entry points and CLI scripts may use process.exit and top-level patterns
+    files: ["src/main.ts", "scripts/**/*.ts"],
+    rules: {
+      "unicorn/no-process-exit": "off",
+      "unicorn/prefer-top-level-await": "off",
+      "unicorn/require-module-specifiers": "off",
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
+      "unicorn/catch-error-name": "off",
+    },
+  },
   prettier
 );
