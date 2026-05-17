@@ -1,30 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { scoreRangeParity } from "../../../src/domain/scoring/range-parity";
-import type { brandItems } from "../../../src/infrastructure/db/schema";
-
-type BrandItem = typeof brandItems.$inferSelect;
-
-function makeItem(
-  overrides: Partial<BrandItem> & { perSizeDataJson: BrandItem["perSizeDataJson"] }
-): BrandItem {
-  return {
-    id: 1,
-    brandId: 1,
-    externalId: null,
-    sourceUrl: "https://example.com/item",
-    name: "Test Item",
-    category: "tops",
-    tierClassification: "mid",
-    tierInferredBy: null,
-    tierRationale: null,
-    basePriceUsd: null,
-    firstSeenAt: "2024-01-01T00:00:00.000Z",
-    lastVerifiedAt: "2024-01-01T00:00:00.000Z",
-    isDiscontinued: false,
-    discontinuedAt: null,
-    ...overrides,
-  };
-}
+import { makeItem, type BrandItem } from "./helpers";
 
 describe("scoreRangeParity", () => {
   test("brand offering everything at all sizes → score 10", () => {
