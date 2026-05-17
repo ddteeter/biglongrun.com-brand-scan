@@ -11,7 +11,6 @@
 **Spec reference:** `docs/superpowers/specs/2026-05-16-brand-scan-design.md`
 
 **Phase 1 scope from the spec (section 12):**
-
 - Project scaffold + Dockerfile + Dokploy deployment
 - Auth (single password) + admin UI shell
 - Brand CRUD + BrandSource CRUD
@@ -29,7 +28,6 @@
 - Quality gates + Playwright E2E for 6 critical flows
 
 **Out of scope (deferred to later phases):**
-
 - Items/catalog (phase 2)
 - Three remaining scoring dimensions (phase 2)
 - Adaptive cadence learning (phase 2)
@@ -255,17 +253,14 @@ brand-scan/
 ### Task 1: Initialize Bun project with strict TypeScript
 
 **Files:**
-
 - Create: `package.json`, `tsconfig.json`, `bunfig.toml`, `.bun-version`, `.gitignore`, `.env.example`, `README.md`
 
 - [ ] **Step 1: Initialize bun**
 
 Run:
-
 ```bash
 bun init -y
 ```
-
 Then overwrite `package.json` with the explicit version below.
 
 - [ ] **Step 2: Write package.json**
@@ -325,9 +320,8 @@ Then overwrite `package.json` with the explicit version below.
     "isolatedModules": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*", "scripts/**/*"],
@@ -348,13 +342,11 @@ preload = []
 - [ ] **Step 5: Write .bun-version and .gitignore**
 
 `.bun-version`:
-
 ```
-1.2.0
+1.3.9
 ```
 
 `.gitignore`:
-
 ```
 node_modules/
 tmp/
@@ -434,7 +426,7 @@ bun add elysia @elysiajs/cookie @elysiajs/html @kitajs/html drizzle-orm zod pino
 bun add -d typescript @types/bun drizzle-kit eslint prettier husky lint-staged dependency-cruiser @playwright/test
 ```
 
-- [ ] **Step 9: Verify it boots**
+- [ ] **Step 9: Verify it boots + typechecks**
 
 Create `src/main.ts` placeholder:
 
@@ -443,12 +435,11 @@ console.log("brand-scan boot OK");
 ```
 
 Run:
-
 ```bash
 bun src/main.ts
+bun run typecheck
 ```
-
-Expected: `brand-scan boot OK`
+Expected: `brand-scan boot OK` from the first command; second command exits 0 with no errors.
 
 - [ ] **Step 10: Commit**
 
@@ -462,7 +453,6 @@ git commit -m "feat: initialize bun project with strict TypeScript"
 ### Task 2: ESLint + Prettier + Husky + lint-staged
 
 **Files:**
-
 - Create: `eslint.config.js`, `.prettierrc`, `.husky/pre-commit`, `package.json` (update lint-staged config)
 
 - [ ] **Step 1: Install ESLint plugins**
@@ -482,15 +472,7 @@ import prettier from "eslint-config-prettier";
 
 export default tseslint.config(
   {
-    ignores: [
-      "node_modules/",
-      "drizzle/",
-      "dist/",
-      "tmp/",
-      "playwright-report/",
-      "test-results/",
-      "coverage/",
-    ],
+    ignores: ["node_modules/", "drizzle/", "dist/", "tmp/", "playwright-report/", "test-results/", "coverage/"]
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -501,16 +483,16 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
+        tsconfigRootDir: import.meta.dirname
+      }
     },
     rules: {
       "unicorn/prefer-module": "off",
       "unicorn/prevent-abbreviations": "off",
       "unicorn/no-null": "off",
       "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
-      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: false }],
-    },
+      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: false }]
+    }
   },
   prettier
 );
@@ -557,13 +539,11 @@ bunx jscpd src --threshold 1 --reporters consoleFull --silent
 ```bash
 bun run lint
 ```
-
 Expected: passes (no source files yet to flag).
 
 ```bash
 bun run format
 ```
-
 Expected: passes.
 
 - [ ] **Step 7: Commit**
@@ -578,7 +558,6 @@ git commit -m "chore: add eslint, prettier, husky, lint-staged"
 ### Task 3: dependency-cruiser with module boundary rules
 
 **Files:**
-
 - Create: `.dependency-cruiser.cjs`
 
 - [ ] **Step 1: Write .dependency-cruiser.cjs**
@@ -590,55 +569,52 @@ module.exports = {
       name: "no-circular",
       severity: "error",
       from: {},
-      to: { circular: true },
+      to: { circular: true }
     },
     {
       name: "no-orphans",
       severity: "warn",
       from: { orphan: true, pathNot: ["src/main.ts", "scripts/", "tests/"] },
-      to: {},
+      to: {}
     },
     {
       name: "domain-cant-import-ui-or-api",
       severity: "error",
       comment: "Domain modules must not depend on public-api or admin-ui.",
       from: { path: "^src/domain" },
-      to: { path: "^src/(public-api|admin-ui)" },
+      to: { path: "^src/(public-api|admin-ui)" }
     },
     {
       name: "extraction-cant-import-scoring",
       severity: "error",
       comment: "Extraction does not depend on scoring; they communicate via DB.",
       from: { path: "^src/domain/extraction" },
-      to: { path: "^src/domain/scoring" },
+      to: { path: "^src/domain/scoring" }
     },
     {
       name: "scoring-cant-import-catalog",
       severity: "error",
       comment: "Scoring reads cached cohort summaries + brand data only.",
       from: { path: "^src/domain/scoring" },
-      to: { path: "^src/domain/catalog" },
+      to: { path: "^src/domain/catalog" }
     },
     {
       name: "public-api-only-from-server",
       severity: "error",
       from: { path: "^src/public-api", pathNot: "^src/public-api" },
-      to: { path: "^src/public-api" },
+      to: { path: "^src/public-api" }
     },
     {
       name: "admin-ui-only-from-server",
       severity: "error",
       from: { path: "^src/admin-ui", pathNot: "^src/admin-ui" },
-      to: { path: "^src/admin-ui" },
+      to: { path: "^src/admin-ui" }
     },
     {
       name: "infrastructure-only-from-domain-or-jobs",
       severity: "error",
-      from: {
-        path: "^src/infrastructure",
-        pathNot: "^src/(infrastructure|main\\.ts|env\\.ts|logger\\.ts)",
-      },
-      to: { path: "^src/infrastructure" },
+      from: { path: "^src/infrastructure", pathNot: "^src/(infrastructure|main\\.ts|env\\.ts|logger\\.ts)" },
+      to: { path: "^src/infrastructure" }
     },
     {
       name: "no-deep-imports-across-modules",
@@ -647,18 +623,18 @@ module.exports = {
       from: { path: "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+" },
       to: {
         path: "^src/(domain|infrastructure|public-api|admin-ui)/[^/]+/.+",
-        pathNot: "/index\\.ts$",
-      },
-    },
+        pathNot: "/index\\.ts$"
+      }
+    }
   ],
   options: {
     tsConfig: { fileName: "tsconfig.json" },
     enhancedResolveOptions: {
       exportsFields: ["exports"],
-      conditionNames: ["import", "require", "node", "default"],
+      conditionNames: ["import", "require", "node", "default"]
     },
-    reporterOptions: { text: { highlightFocused: true } },
-  },
+    reporterOptions: { text: { highlightFocused: true } }
+  }
 };
 ```
 
@@ -667,7 +643,6 @@ module.exports = {
 ```bash
 bun run arch
 ```
-
 Expected: runs cleanly (no source dirs yet → no violations).
 
 - [ ] **Step 3: Add arch check to pre-commit**
@@ -692,7 +667,6 @@ git commit -m "chore: add dependency-cruiser with module boundary rules"
 ### Task 4: Pino logger with secret redaction
 
 **Files:**
-
 - Create: `src/logger.ts`
 - Test: `tests/unit/logger.test.ts`
 
@@ -709,7 +683,7 @@ describe("logger", () => {
     const events: string[] = [];
     const logger = createLogger({
       level: "info",
-      write: (line: string) => events.push(line),
+      write: (line: string) => events.push(line)
     });
     logger.info({ anthropicApiKey: "sk-secret", brand: "x" }, "test");
     const line = events[0]!;
@@ -725,7 +699,6 @@ describe("logger", () => {
 ```bash
 bun test tests/unit/logger.test.ts
 ```
-
 Expected: FAIL (module not found).
 
 - [ ] **Step 3: Write src/logger.ts**
@@ -746,7 +719,7 @@ const REDACT_PATHS = [
   "headers.authorization",
   "headers.cookie",
   "req.headers.authorization",
-  "req.headers.cookie",
+  "req.headers.cookie"
 ];
 
 interface CreateLoggerOptions {
@@ -759,9 +732,11 @@ export function createLogger(options: CreateLoggerOptions): Logger {
     {
       level: options.level,
       redact: { paths: REDACT_PATHS, censor: "[Redacted]" },
-      base: undefined,
+      base: undefined
     },
-    options.write ? { write: (msg: string) => options.write!(msg) } : pino.destination(1)
+    options.write
+      ? { write: (msg: string) => options.write!(msg) }
+      : pino.destination(1)
   );
 }
 ```
@@ -771,7 +746,6 @@ export function createLogger(options: CreateLoggerOptions): Logger {
 ```bash
 bun test tests/unit/logger.test.ts
 ```
-
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -786,7 +760,6 @@ git commit -m "feat: add Pino logger with secret redaction"
 ### Task 5: Env loader with Zod validation
 
 **Files:**
-
 - Create: `src/env.ts`
 - Test: `tests/unit/env.test.ts`
 
@@ -812,7 +785,7 @@ describe("env", () => {
       FIRECRAWL_MONTHLY_PAGE_BUDGET: "1000",
       ANTHROPIC_MONTHLY_USD_BUDGET: "10",
       BUN_ENV: "development",
-      USE_REAL_APIS: "0",
+      USE_REAL_APIS: "0"
     });
     expect(env.FIRECRAWL_MONTHLY_PAGE_BUDGET).toBe(1000);
     expect(env.ANTHROPIC_MONTHLY_USD_BUDGET).toBe(10);
@@ -853,7 +826,7 @@ const EnvSchema = z.object({
   USE_REAL_APIS: z
     .union([z.literal("0"), z.literal("1"), z.literal("true"), z.literal("false")])
     .transform((v) => v === "1" || v === "true")
-    .default("0"),
+    .default("0")
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -883,7 +856,6 @@ git commit -m "feat: add Zod-validated env loader"
 ### Task 6: Drizzle config + bun:sqlite client wiring
 
 **Files:**
-
 - Create: `drizzle.config.ts`, `src/infrastructure/db/index.ts`
 
 - [ ] **Step 1: Write drizzle.config.ts**
@@ -898,7 +870,7 @@ export default defineConfig({
   dialect: "sqlite",
   dbCredentials: { url: env.DATABASE_PATH },
   verbose: true,
-  strict: true,
+  strict: true
 });
 ```
 
@@ -944,7 +916,6 @@ export function closeDb(): void {
 - [ ] **Step 4: Create schema barrel placeholder**
 
 `src/infrastructure/db/schema/index.ts`:
-
 ```typescript
 // Tables will be added in Group B.
 export {};
@@ -957,6 +928,7 @@ git add drizzle.config.ts src/infrastructure/db/
 git commit -m "feat: wire bun:sqlite + drizzle"
 ```
 
+
 ---
 
 ## Group B — Database Schema
@@ -966,7 +938,6 @@ All schema tables follow the spec section 5 shapes. Tables are split into 5 file
 ### Task 7: brands + brand_sources schema
 
 **Files:**
-
 - Create: `src/infrastructure/db/schema/brands.ts`, `src/infrastructure/db/schema/index.ts` (update)
 - Test: `tests/integration/schema-brands.test.ts`
 
@@ -1025,46 +996,32 @@ describe("brands + brand_sources schema", () => {
   });
 
   test("inserts a brand", async () => {
-    const [row] = await db
-      .insert(brands)
-      .values({
-        slug: "tracksmith",
-        name: "Tracksmith",
-        primaryUrl: "https://tracksmith.com",
-      })
-      .returning();
+    const [row] = await db.insert(brands).values({
+      slug: "tracksmith",
+      name: "Tracksmith",
+      primaryUrl: "https://tracksmith.com"
+    }).returning();
     expect(row?.slug).toBe("tracksmith");
     expect(row?.active).toBe(true);
   });
 
   test("enforces unique slug", async () => {
     await db.insert(brands).values({
-      slug: "tracksmith",
-      name: "Tracksmith",
-      primaryUrl: "https://tracksmith.com",
+      slug: "tracksmith", name: "Tracksmith", primaryUrl: "https://tracksmith.com"
     });
     await expect(
       db.insert(brands).values({
-        slug: "tracksmith",
-        name: "Other",
-        primaryUrl: "https://other.com",
+        slug: "tracksmith", name: "Other", primaryUrl: "https://other.com"
       })
     ).rejects.toThrow();
   });
 
   test("cascade-deletes sources when brand deleted", async () => {
-    const [b] = await db
-      .insert(brands)
-      .values({
-        slug: "x",
-        name: "X",
-        primaryUrl: "https://x.com",
-      })
-      .returning();
+    const [b] = await db.insert(brands).values({
+      slug: "x", name: "X", primaryUrl: "https://x.com"
+    }).returning();
     await db.insert(brandSources).values({
-      brandId: b!.id,
-      url: "https://x.com/size-chart",
-      sourceType: "size_chart",
+      brandId: b!.id, url: "https://x.com/size-chart", sourceType: "size_chart"
     });
     await db.delete(brands).where(eq(brands.id, b!.id));
     const sources = await db.select().from(brandSources);
@@ -1078,7 +1035,6 @@ describe("brands + brand_sources schema", () => {
 ```bash
 bun test tests/integration/schema-brands.test.ts
 ```
-
 Expected: FAIL (schema file missing).
 
 - [ ] **Step 3: Write src/infrastructure/db/schema/brands.ts**
@@ -1103,12 +1059,8 @@ export const brands = sqliteTable("brands", {
   cadenceLearnedAt: text("cadence_learned_at"),
   observedChangeIntervals: text("observed_change_intervals", { mode: "json" }).$type<number[]>(),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
   archivedAt: text("archived_at"),
 });
 
@@ -1149,7 +1101,6 @@ export * from "./brands";
 ```bash
 bun test tests/integration/schema-brands.test.ts
 ```
-
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
@@ -1164,7 +1115,6 @@ git commit -m "feat: brands and brand_sources schema"
 ### Task 8: brand_size_chart_versions schema
 
 **Files:**
-
 - Create: `src/infrastructure/db/schema/versions.ts`, update `src/infrastructure/db/schema/index.ts`
 - Test: `tests/integration/schema-versions.test.ts`
 
@@ -1222,25 +1172,17 @@ describe("brand_size_chart_versions schema", () => {
   });
 
   test("inserts a pending version", async () => {
-    const [b] = await db
-      .insert(brands)
-      .values({
-        slug: "x",
-        name: "X",
-        primaryUrl: "https://x.com",
-      })
-      .returning();
-    const [v] = await db
-      .insert(brandSizeChartVersions)
-      .values({
-        brandId: b!.id,
-        brandSourceId: 1,
-        sizeChartJson: { measurements: {} },
-        confidenceScore: 0.5,
-        confidenceBreakdownJson: { claudeReported: 0.5, structuralValidation: 1, cohortOutlier: 1 },
-        status: "pending_review",
-      })
-      .returning();
+    const [b] = await db.insert(brands).values({
+      slug: "x", name: "X", primaryUrl: "https://x.com"
+    }).returning();
+    const [v] = await db.insert(brandSizeChartVersions).values({
+      brandId: b!.id,
+      brandSourceId: 1,
+      sizeChartJson: { measurements: {} },
+      confidenceScore: 0.5,
+      confidenceBreakdownJson: { claudeReported: 0.5, structuralValidation: 1, cohortOutlier: 1 },
+      status: "pending_review",
+    }).returning();
     expect(v?.status).toBe("pending_review");
     expect(v?.confidenceScore).toBe(0.5);
   });
@@ -1266,13 +1208,9 @@ export const brandSizeChartVersions = sqliteTable("brand_size_chart_versions", {
     .notNull()
     .references(() => brands.id, { onDelete: "cascade" }),
   brandSourceId: integer("brand_source_id").notNull(),
-  extractedAt: text("extracted_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  extractedAt: text("extracted_at").notNull().default(sql`(datetime('now'))`),
   sourceRunId: integer("source_run_id"),
-  sizeChartJson: text("size_chart_json", { mode: "json" })
-    .$type<Record<string, unknown>>()
-    .notNull(),
+  sizeChartJson: text("size_chart_json", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
   confidenceScore: real("confidence_score").notNull(),
   confidenceBreakdownJson: text("confidence_breakdown_json", { mode: "json" })
     .$type<{ claudeReported: number; structuralValidation: number; cohortOutlier: number }>()
@@ -1286,9 +1224,7 @@ export const brandSizeChartVersions = sqliteTable("brand_size_chart_versions", {
   supersedesVersionId: integer("supersedes_version_id").references(
     (): AnySQLiteColumn => brandSizeChartVersions.id
   ),
-  deltaFromPriorJson: text("delta_from_prior_json", { mode: "json" }).$type<
-    Record<string, unknown>
-  >(),
+  deltaFromPriorJson: text("delta_from_prior_json", { mode: "json" }).$type<Record<string, unknown>>(),
 });
 ```
 
@@ -1319,7 +1255,6 @@ git commit -m "feat: brand_size_chart_versions schema"
 ### Task 9: Scoring schema (cohort_summaries + history + snapshots)
 
 **Files:**
-
 - Create: `src/infrastructure/db/schema/scoring.ts`, update barrel
 - Test: `tests/integration/schema-scoring.test.ts`
 
@@ -1329,11 +1264,7 @@ git commit -m "feat: brand_size_chart_versions schema"
 import { describe, test, expect, beforeEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import {
-  cohortSummaries,
-  brandScoreHistory,
-  brandScoreSnapshots,
-} from "../../src/infrastructure/db/schema/scoring";
+import { cohortSummaries, brandScoreHistory, brandScoreSnapshots } from "../../src/infrastructure/db/schema/scoring";
 
 describe("scoring schema", () => {
   let db: ReturnType<typeof drizzle>;
@@ -1371,35 +1302,18 @@ describe("scoring schema", () => {
   });
 
   test("inserts cohort summary + history + snapshot", async () => {
-    const [c] = await db
-      .insert(cohortSummaries)
-      .values({
-        scoringConfigVersion: "v1.0",
-        brandCount: 5,
-        summaryJson: { foo: 1 },
-        trigger: "scheduled",
-      })
-      .returning();
-    const [h] = await db
-      .insert(brandScoreHistory)
-      .values({
-        brandId: 1,
-        scoringConfigVersion: "v1.0",
-        cohortSummaryId: c!.id,
-        scoresJson: { composite: 7.5 },
-        inputsJson: { sizeChartVersionId: 10 },
-      })
-      .returning();
-    const [s] = await db
-      .insert(brandScoreSnapshots)
-      .values({
-        brandId: 1,
-        promotedFromHistoryId: h!.id,
-        cohortSummaryId: c!.id,
-        scoresJson: { composite: 7.5 },
-        isPublic: true,
-      })
-      .returning();
+    const [c] = await db.insert(cohortSummaries).values({
+      scoringConfigVersion: "v1.0", brandCount: 5,
+      summaryJson: { foo: 1 }, trigger: "scheduled"
+    }).returning();
+    const [h] = await db.insert(brandScoreHistory).values({
+      brandId: 1, scoringConfigVersion: "v1.0", cohortSummaryId: c!.id,
+      scoresJson: { composite: 7.5 }, inputsJson: { sizeChartVersionId: 10 }
+    }).returning();
+    const [s] = await db.insert(brandScoreSnapshots).values({
+      brandId: 1, promotedFromHistoryId: h!.id, cohortSummaryId: c!.id,
+      scoresJson: { composite: 7.5 }, isPublic: true
+    }).returning();
     expect(s?.isPublic).toBe(true);
   });
 });
@@ -1419,9 +1333,7 @@ import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
 
 export const cohortSummaries = sqliteTable("cohort_summaries", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  computedAt: text("computed_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  computedAt: text("computed_at").notNull().default(sql`(datetime('now'))`),
   scoringConfigVersion: text("scoring_config_version").notNull(),
   brandCount: integer("brand_count").notNull(),
   summaryJson: text("summary_json", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
@@ -1431,34 +1343,26 @@ export const cohortSummaries = sqliteTable("cohort_summaries", {
 export const brandScoreHistory = sqliteTable("brand_score_history", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   brandId: integer("brand_id").notNull(),
-  computedAt: text("computed_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  computedAt: text("computed_at").notNull().default(sql`(datetime('now'))`),
   scoringConfigVersion: text("scoring_config_version").notNull(),
   cohortSummaryId: integer("cohort_summary_id")
     .notNull()
     .references(() => cohortSummaries.id),
-  scoresJson: text("scores_json", { mode: "json" })
-    .$type<Record<string, number | null>>()
-    .notNull(),
+  scoresJson: text("scores_json", { mode: "json" }).$type<Record<string, number | null>>().notNull(),
   inputsJson: text("inputs_json", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
 });
 
 export const brandScoreSnapshots = sqliteTable("brand_score_snapshots", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   brandId: integer("brand_id").notNull(),
-  snapshotAt: text("snapshot_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  snapshotAt: text("snapshot_at").notNull().default(sql`(datetime('now'))`),
   promotedFromHistoryId: integer("promoted_from_history_id")
     .notNull()
     .references((): AnySQLiteColumn => brandScoreHistory.id),
   cohortSummaryId: integer("cohort_summary_id")
     .notNull()
     .references(() => cohortSummaries.id),
-  scoresJson: text("scores_json", { mode: "json" })
-    .$type<Record<string, number | null>>()
-    .notNull(),
+  scoresJson: text("scores_json", { mode: "json" }).$type<Record<string, number | null>>().notNull(),
   isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
 });
 ```
@@ -1489,7 +1393,6 @@ git commit -m "feat: scoring schema (cohort summaries, history, snapshots)"
 ### Task 10: Operations schema (jobs + runs + run_artifacts + api_usage_log)
 
 **Files:**
-
 - Create: `src/infrastructure/db/schema/ops.ts`, update barrel
 - Test: `tests/integration/schema-ops.test.ts`
 
@@ -1555,22 +1458,16 @@ describe("ops schema", () => {
   });
 
   test("inserts a job with a unique dedupe key", async () => {
-    const [j] = await db
-      .insert(jobs)
-      .values({
-        jobType: "extract-brand-source",
-        payloadJson: { brandSourceId: 1 },
-        dedupeKey: "extract-brand-source:1",
-        status: "pending",
-      })
-      .returning();
+    const [j] = await db.insert(jobs).values({
+      jobType: "extract-brand-source",
+      payloadJson: { brandSourceId: 1 },
+      dedupeKey: "extract-brand-source:1",
+      status: "pending",
+    }).returning();
     expect(j?.status).toBe("pending");
     await expect(
       db.insert(jobs).values({
-        jobType: "extract-brand-source",
-        payloadJson: {},
-        dedupeKey: "extract-brand-source:1",
-        status: "pending",
+        jobType: "extract-brand-source", payloadJson: {}, dedupeKey: "extract-brand-source:1", status: "pending"
       })
     ).rejects.toThrow();
   });
@@ -1599,9 +1496,7 @@ export const jobs = sqliteTable("jobs", {
   }).notNull(),
   attempts: integer("attempts").notNull().default(0),
   maxAttempts: integer("max_attempts").notNull().default(3),
-  scheduledFor: text("scheduled_for")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  scheduledFor: text("scheduled_for").notNull().default(sql`(datetime('now'))`),
   pickedAt: text("picked_at"),
   heartbeatAt: text("heartbeat_at"),
   heartbeatIntervalSecs: integer("heartbeat_interval_secs"),
@@ -1615,9 +1510,7 @@ export const runs = sqliteTable("runs", {
   jobId: integer("job_id")
     .notNull()
     .references((): AnySQLiteColumn => jobs.id, { onDelete: "cascade" }),
-  startedAt: text("started_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  startedAt: text("started_at").notNull().default(sql`(datetime('now'))`),
   finishedAt: text("finished_at"),
   status: text("status").notNull(),
   summaryJson: text("summary_json", { mode: "json" }).$type<Record<string, unknown>>(),
@@ -1634,9 +1527,7 @@ export const runArtifacts = sqliteTable("run_artifacts", {
   filePath: text("file_path").notNull(),
   bytes: integer("bytes").notNull(),
   sha256: text("sha256").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 
 export const apiUsageLog = sqliteTable("api_usage_log", {
@@ -1646,9 +1537,7 @@ export const apiUsageLog = sqliteTable("api_usage_log", {
   unitsUsed: real("units_used").notNull(),
   unitsKind: text("units_kind").notNull(),
   estimatedCostUsd: real("estimated_cost_usd").notNull(),
-  occurredAt: text("occurred_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  occurredAt: text("occurred_at").notNull().default(sql`(datetime('now'))`),
 });
 ```
 
@@ -1674,7 +1563,6 @@ git commit -m "feat: ops schema (jobs, runs, artifacts, api_usage_log)"
 ### Task 11: Auth schema + migration runner
 
 **Files:**
-
 - Create: `src/infrastructure/db/schema/auth.ts`, `src/infrastructure/db/migrate.ts`, update barrel
 - Generate: `drizzle/0000_*.sql` via drizzle-kit
 
@@ -1687,13 +1575,9 @@ import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
 export const adminSessions = sqliteTable("admin_sessions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   sessionTokenHash: text("session_token_hash").notNull().unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   expiresAt: text("expires_at").notNull(),
-  lastSeenAt: text("last_seen_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
+  lastSeenAt: text("last_seen_at").notNull().default(sql`(datetime('now'))`),
 });
 ```
 
@@ -1712,7 +1596,6 @@ export * from "./auth";
 ```bash
 bun run db:generate
 ```
-
 Expected: `drizzle/0000_<name>.sql` created with all 9 tables.
 
 Inspect the file and verify all tables present. Commit the generated file.
@@ -1739,7 +1622,6 @@ if (import.meta.main) {
 ```bash
 DATABASE_PATH=./tmp/test.sqlite bun run db:migrate
 ```
-
 Expected: prints "Migrations applied." and creates `./tmp/test.sqlite`.
 
 ```bash
@@ -1753,6 +1635,7 @@ git add drizzle/ src/infrastructure/db/schema/auth.ts src/infrastructure/db/sche
 git commit -m "feat: admin_sessions schema and migration runner"
 ```
 
+
 ---
 
 ## Group C — Job Queue Infrastructure
@@ -1760,7 +1643,6 @@ git commit -m "feat: admin_sessions schema and migration runner"
 ### Task 12: Queue operations (insert / claim / finish / fail)
 
 **Files:**
-
 - Create: `src/infrastructure/queue/queue.ts`, `src/infrastructure/queue/handlers.ts`, `src/infrastructure/queue/index.ts`
 - Test: `tests/integration/job-queue-ops.test.ts`
 
@@ -2034,14 +1916,7 @@ export function clearHandlers(): void {
 
 ```typescript
 export { Queue, type EnqueueInput, type ClaimOptions } from "./queue";
-export {
-  registerHandler,
-  getHandler,
-  listHandlers,
-  clearHandlers,
-  type JobHandler,
-  type HandlerContext,
-} from "./handlers";
+export { registerHandler, getHandler, listHandlers, clearHandlers, type JobHandler, type HandlerContext } from "./handlers";
 ```
 
 - [ ] **Step 6: Run test, verify pass**
@@ -2062,7 +1937,6 @@ git commit -m "feat: SQLite-backed job queue ops"
 ### Task 13: Queue runner with EventEmitter wakeup + heartbeat
 
 **Files:**
-
 - Create: `src/infrastructure/queue/runner.ts`, update `src/infrastructure/queue/index.ts`
 - Test: `tests/integration/queue-runner.test.ts`
 
@@ -2123,12 +1997,7 @@ describe("QueueRunner", () => {
       throw new Error("nope");
     });
     runner.start();
-    const id = await queue.enqueue({
-      jobType: "boom",
-      payload: {},
-      dedupeKey: "k1",
-      maxAttempts: 1,
-    });
+    const id = await queue.enqueue({ jobType: "boom", payload: {}, dedupeKey: "k1", maxAttempts: 1 });
     await new Promise((r) => setTimeout(r, 250));
     const job = await queue.findById(id);
     expect(job?.status).toBe("failed_dead");
@@ -2211,11 +2080,7 @@ export class QueueRunner {
     }
   }
 
-  private async execute(job: {
-    id: number;
-    jobType: string;
-    payloadJson: Record<string, unknown>;
-  }): Promise<void> {
+  private async execute(job: { id: number; jobType: string; payloadJson: Record<string, unknown> }): Promise<void> {
     const handler = getHandler(job.jobType);
     if (!handler) {
       await this.opts.queue.fail(job.id, new Error(`No handler for job type: ${job.jobType}`));
@@ -2244,14 +2109,7 @@ export class QueueRunner {
 
 ```typescript
 export { Queue, type EnqueueInput, type ClaimOptions } from "./queue";
-export {
-  registerHandler,
-  getHandler,
-  listHandlers,
-  clearHandlers,
-  type JobHandler,
-  type HandlerContext,
-} from "./handlers";
+export { registerHandler, getHandler, listHandlers, clearHandlers, type JobHandler, type HandlerContext } from "./handlers";
 export { QueueRunner, type RunnerOptions } from "./runner";
 ```
 
@@ -2273,7 +2131,6 @@ git commit -m "feat: queue runner with EventEmitter wakeup and heartbeat"
 ### Task 14: Scheduler (Bun.cron registry → queue insertions)
 
 **Files:**
-
 - Create: `src/infrastructure/queue/scheduler.ts`, update barrel
 - Test: `tests/unit/scheduler.test.ts`
 
@@ -2291,24 +2148,13 @@ describe("Scheduler", () => {
       { name: "stuck", cron: "* * * * *", enqueue: async () => undefined },
     ];
     for (const s of specs) sched.register(s);
-    expect(
-      sched
-        .list()
-        .map((s) => s.name)
-        .sort()
-    ).toEqual(["stuck", "sweep"]);
+    expect(sched.list().map((s) => s.name).sort()).toEqual(["stuck", "sweep"]);
   });
 
   test("fireNow runs the enqueue fn synchronously for tests", async () => {
     const sched = new Scheduler();
     let called = false;
-    sched.register({
-      name: "x",
-      cron: "* * * * *",
-      enqueue: async () => {
-        called = true;
-      },
-    });
+    sched.register({ name: "x", cron: "* * * * *", enqueue: async () => { called = true; } });
     await sched.fireNow("x");
     expect(called).toBe(true);
   });
@@ -2384,14 +2230,7 @@ export class Scheduler {
 
 ```typescript
 export { Queue, type EnqueueInput, type ClaimOptions } from "./queue";
-export {
-  registerHandler,
-  getHandler,
-  listHandlers,
-  clearHandlers,
-  type JobHandler,
-  type HandlerContext,
-} from "./handlers";
+export { registerHandler, getHandler, listHandlers, clearHandlers, type JobHandler, type HandlerContext } from "./handlers";
 export { QueueRunner, type RunnerOptions } from "./runner";
 export { Scheduler, type CronSpec } from "./scheduler";
 ```
@@ -2400,7 +2239,7 @@ export { Scheduler, type CronSpec } from "./scheduler";
 
 ```bash
 bun test tests/unit/scheduler.test.ts
-git add src/infrastructure/queue/ tests/unit/scheduler.test.ts package.json bun.lockb
+git add src/infrastructure/queue/ tests/unit/scheduler.test.ts package.json bun.lock
 git commit -m "feat: cron scheduler registry (croner)"
 ```
 
@@ -2409,7 +2248,6 @@ git commit -m "feat: cron scheduler registry (croner)"
 ### Task 15: Stuck-job detector
 
 **Files:**
-
 - Create: `src/infrastructure/queue/stuck-detector.ts`
 - Test: `tests/integration/stuck-detector.test.ts`
 
@@ -2548,6 +2386,7 @@ git add src/infrastructure/queue/stuck-detector.ts tests/integration/stuck-detec
 git commit -m "feat: stuck-job detector"
 ```
 
+
 ---
 
 ## Group D — External Service Clients
@@ -2555,7 +2394,6 @@ git commit -m "feat: stuck-job detector"
 ### Task 16: Per-domain rate limiter
 
 **Files:**
-
 - Create: `src/infrastructure/external/rate-limiter.ts`
 - Test: `tests/unit/rate-limiter.test.ts`
 
@@ -2662,12 +2500,10 @@ git commit -m "feat: per-domain rate limiter"
 ### Task 17: Firecrawl client with conditional headers
 
 **Files:**
-
 - Create: `src/infrastructure/external/firecrawl.ts`
 - Test: `tests/integration/firecrawl-client.test.ts`
 
 The client supports:
-
 - `headOnly` request: plain `fetch` with ETag/If-Modified-Since conditional headers (cheap path, NOT a Firecrawl call)
 - `render` request: full Firecrawl `/scrape` call returning markdown + screenshot
 
@@ -2677,8 +2513,7 @@ The client supports:
 import { describe, test, expect, beforeEach } from "bun:test";
 import { FirecrawlClient } from "../../src/infrastructure/external/firecrawl";
 
-const stubFetch =
-  (responses: Record<string, Response>) =>
+const stubFetch = (responses: Record<string, Response>) =>
   (url: RequestInfo | URL): Promise<Response> => {
     const key = url.toString();
     const r = responses[key];
@@ -2691,7 +2526,8 @@ describe("FirecrawlClient.headOnly", () => {
     const client = new FirecrawlClient({
       apiKey: "test",
       fetch: stubFetch({
-        "https://brand.com/size": new Response(null, { status: 304 }),
+        "https://brand.com/size":
+          new Response(null, { status: 304 }),
       }),
     });
     const r = await client.headOnly("https://brand.com/size", {
@@ -2706,10 +2542,8 @@ describe("FirecrawlClient.headOnly", () => {
     const client = new FirecrawlClient({
       apiKey: "test",
       fetch: stubFetch({
-        "https://brand.com/size": new Response(body, {
-          status: 200,
-          headers: { etag: '"new"', "last-modified": "Thu, 02 Jan 2025 00:00:00 GMT" },
-        }),
+        "https://brand.com/size":
+          new Response(body, { status: 200, headers: { etag: '"new"', "last-modified": "Thu, 02 Jan 2025 00:00:00 GMT" } }),
       }),
     });
     const r = await client.headOnly("https://brand.com/size", {});
@@ -2726,20 +2560,16 @@ describe("FirecrawlClient.render", () => {
     const client = new FirecrawlClient({
       apiKey: "test",
       fetch: stubFetch({
-        "https://api.firecrawl.dev/v1/scrape": new Response(
-          JSON.stringify({
+        "https://api.firecrawl.dev/v1/scrape":
+          new Response(JSON.stringify({
             success: true,
             data: {
               markdown: "# size chart\n| size | chest |\n|---|---|\n| S | 36 |",
               screenshot: "https://files.firecrawl.dev/screenshots/abc.png",
             },
-          }),
-          { status: 200, headers: { "content-type": "application/json" } }
-        ),
-        "https://files.firecrawl.dev/screenshots/abc.png": new Response(
-          new Uint8Array([137, 80, 78, 71]),
-          { status: 200 }
-        ),
+          }), { status: 200, headers: { "content-type": "application/json" } }),
+        "https://files.firecrawl.dev/screenshots/abc.png":
+          new Response(new Uint8Array([137, 80, 78, 71]), { status: 200 }),
       }),
     });
     const r = await client.render("https://brand.com/size");
@@ -2751,10 +2581,8 @@ describe("FirecrawlClient.render", () => {
     const client = new FirecrawlClient({
       apiKey: "test",
       fetch: stubFetch({
-        "https://api.firecrawl.dev/v1/scrape": new Response(
-          JSON.stringify({ success: false, error: "rate limit" }),
-          { status: 429 }
-        ),
+        "https://api.firecrawl.dev/v1/scrape":
+          new Response(JSON.stringify({ success: false, error: "rate limit" }), { status: 429 }),
       }),
     });
     await expect(client.render("https://brand.com/size")).rejects.toThrow(/rate limit/);
@@ -2865,7 +2693,6 @@ git commit -m "feat: Firecrawl client with conditional fetch + render"
 ### Task 18: Anthropic client wrapper
 
 **Files:**
-
 - Create: `src/infrastructure/external/anthropic.ts`
 - Test: `tests/integration/anthropic-client.test.ts`
 
@@ -2881,11 +2708,7 @@ bun add @anthropic-ai/sdk
 
 ```typescript
 import { describe, test, expect } from "bun:test";
-import {
-  AnthropicClient,
-  MODEL_SONNET,
-  MODEL_HAIKU,
-} from "../../src/infrastructure/external/anthropic";
+import { AnthropicClient, MODEL_SONNET, MODEL_HAIKU } from "../../src/infrastructure/external/anthropic";
 
 class FakeSdkClient {
   // Mirror the SDK shape we use.
@@ -2934,7 +2757,7 @@ bun test tests/integration/anthropic-client.test.ts
 
 - [ ] **Step 4: Write src/infrastructure/external/anthropic.ts**
 
-````typescript
+```typescript
 import Anthropic from "@anthropic-ai/sdk";
 
 export const MODEL_SONNET = "claude-sonnet-4-6" as const;
@@ -2980,15 +2803,12 @@ export class AnthropicClient {
         },
       });
     }
-    const resp = (await this.sdk.messages.create({
+    const resp = await this.sdk.messages.create({
       model: req.model,
       max_tokens: req.maxTokens,
       system: req.systemPrompt,
       messages: [{ role: "user", content }],
-    } as never)) as {
-      content: Array<{ type: string; text?: string }>;
-      usage: { input_tokens: number; output_tokens: number };
-    };
+    } as never) as { content: Array<{ type: string; text?: string }>; usage: { input_tokens: number; output_tokens: number } };
 
     const textBlock = resp.content.find((b) => b.type === "text");
     const rawText = textBlock?.text ?? "";
@@ -3011,13 +2831,13 @@ function extractJsonBlock(text: string): string {
   if (fence?.[1]) return fence[1];
   return text.trim();
 }
-````
+```
 
 - [ ] **Step 5: Run, verify pass + commit**
 
 ```bash
 bun test tests/integration/anthropic-client.test.ts
-git add src/infrastructure/external/anthropic.ts tests/integration/anthropic-client.test.ts package.json bun.lockb
+git add src/infrastructure/external/anthropic.ts tests/integration/anthropic-client.test.ts package.json bun.lock
 git commit -m "feat: Anthropic client wrapper with structured extract"
 ```
 
@@ -3026,7 +2846,6 @@ git commit -m "feat: Anthropic client wrapper with structured extract"
 ### Task 19: Pushover client + usage tracker + circuit breaker
 
 **Files:**
-
 - Create: `src/infrastructure/external/pushover.ts`, `src/domain/usage/tracker.ts`, `src/domain/usage/circuit.ts`, `src/domain/usage/index.ts`
 - Test: `tests/integration/usage-circuit.test.ts`
 
@@ -3126,10 +2945,7 @@ export interface BudgetCheck {
 }
 
 export class CircuitBreaker {
-  constructor(
-    private readonly db: DB,
-    private readonly cfg: BudgetConfig
-  ) {}
+  constructor(private readonly db: DB, private readonly cfg: BudgetConfig) {}
 
   async check(provider: Provider): Promise<BudgetCheck> {
     const monthStart = new Date();
@@ -3137,15 +2953,11 @@ export class CircuitBreaker {
     monthStart.setUTCHours(0, 0, 0, 0);
     const sinceIso = monthStart.toISOString();
     const [agg] = await this.db
-      .select({
-        pages: sql<number>`coalesce(sum(units_used), 0)`,
-        cost: sql<number>`coalesce(sum(estimated_cost_usd), 0)`,
-      })
+      .select({ pages: sql<number>`coalesce(sum(units_used), 0)`, cost: sql<number>`coalesce(sum(estimated_cost_usd), 0)` })
       .from(apiUsageLog)
       .where(and(eq(apiUsageLog.provider, provider), gte(apiUsageLog.occurredAt, sinceIso)));
     const used = provider === "anthropic" ? (agg?.cost ?? 0) : (agg?.pages ?? 0);
-    const budget =
-      provider === "anthropic" ? this.cfg.anthropicMonthlyUsd : this.cfg.firecrawlMonthlyPages;
+    const budget = provider === "anthropic" ? this.cfg.anthropicMonthlyUsd : this.cfg.firecrawlMonthlyPages;
     const pct = budget === 0 ? 0 : used / budget;
     const status: BudgetStatus = pct >= 1 ? "exceeded" : pct >= 0.75 ? "warn" : "ok";
     return { provider, status, used, budget, percentUsed: pct };
@@ -3190,17 +3002,9 @@ describe("usage tracker + circuit breaker", () => {
     const db = makeDb();
     const tracker = new UsageTracker(db);
     for (let i = 0; i < 8; i++) {
-      await tracker.record({
-        provider: "firecrawl",
-        unitsUsed: 100,
-        unitsKind: "pages",
-        estimatedCostUsd: 0,
-      });
+      await tracker.record({ provider: "firecrawl", unitsUsed: 100, unitsKind: "pages", estimatedCostUsd: 0 });
     }
-    const breaker = new CircuitBreaker(db, {
-      firecrawlMonthlyPages: 1000,
-      anthropicMonthlyUsd: 10,
-    });
+    const breaker = new CircuitBreaker(db, { firecrawlMonthlyPages: 1000, anthropicMonthlyUsd: 10 });
     const check = await breaker.check("firecrawl");
     expect(check.used).toBe(800);
     expect(check.status).toBe("warn");
@@ -3209,16 +3013,8 @@ describe("usage tracker + circuit breaker", () => {
   test("returns exceeded at 100%", async () => {
     const db = makeDb();
     const tracker = new UsageTracker(db);
-    await tracker.record({
-      provider: "anthropic",
-      unitsUsed: 1,
-      unitsKind: "messages",
-      estimatedCostUsd: 10,
-    });
-    const breaker = new CircuitBreaker(db, {
-      firecrawlMonthlyPages: 1000,
-      anthropicMonthlyUsd: 10,
-    });
+    await tracker.record({ provider: "anthropic", unitsUsed: 1, unitsKind: "messages", estimatedCostUsd: 10 });
+    const breaker = new CircuitBreaker(db, { firecrawlMonthlyPages: 1000, anthropicMonthlyUsd: 10 });
     const check = await breaker.check("anthropic");
     expect(check.status).toBe("exceeded");
   });
@@ -3233,6 +3029,7 @@ git add src/infrastructure/external/pushover.ts src/domain/usage/ tests/integrat
 git commit -m "feat: Pushover client + usage tracker + circuit breaker"
 ```
 
+
 ---
 
 ## Group E — Extraction Pipeline
@@ -3242,7 +3039,6 @@ This group implements spec section 6 step-by-step. Tasks 20–24 build the pure 
 ### Task 20: Canonical size chart shape (Zod)
 
 **Files:**
-
 - Create: `src/domain/extraction/canonical.ts`, `src/domain/extraction/index.ts`
 - Test: `tests/unit/canonical.test.ts`
 
@@ -3296,12 +3092,8 @@ describe("canonical size chart", () => {
     };
     expect(() => CanonicalSizeChartSchema.parse({ ...base, gender_specific: false })).not.toThrow();
     expect(() => CanonicalSizeChartSchema.parse({ ...base, gender_specific: "men" })).not.toThrow();
-    expect(() =>
-      CanonicalSizeChartSchema.parse({ ...base, gender_specific: "women" })
-    ).not.toThrow();
-    expect(() =>
-      CanonicalSizeChartSchema.parse({ ...base, gender_specific: "unisex" })
-    ).not.toThrow();
+    expect(() => CanonicalSizeChartSchema.parse({ ...base, gender_specific: "women" })).not.toThrow();
+    expect(() => CanonicalSizeChartSchema.parse({ ...base, gender_specific: "unisex" })).not.toThrow();
   });
 });
 ```
@@ -3367,7 +3159,6 @@ git commit -m "feat: canonical size chart shape (Zod)"
 ### Task 21: Structural validators
 
 **Files:**
-
 - Create: `src/domain/extraction/validators.ts`, update barrel
 - Test: `tests/unit/validators.test.ts`
 
@@ -3521,7 +3312,6 @@ git commit -m "feat: structural validators for canonical size charts"
 ### Task 22: Deterministic markdown-table parser
 
 **Files:**
-
 - Create: `src/domain/extraction/parser-deterministic.ts`, update barrel
 - Test: `tests/unit/parser-deterministic.test.ts`
 
@@ -3627,10 +3417,7 @@ export function parseDeterministic(markdown: string, sourceUrl: string): Canonic
       .split("|")
       .map((c) => c.trim());
     const colMap: Record<"size" | "chest" | "waist" | "hip", number | null> = {
-      size: null,
-      chest: null,
-      waist: null,
-      hip: null,
+      size: null, chest: null, waist: null, hip: null,
     };
     for (let c = 0; c < cols.length; c++) {
       for (const key of Object.keys(COL_MATCHERS) as Array<keyof typeof COL_MATCHERS>) {
@@ -3646,10 +3433,7 @@ export function parseDeterministic(markdown: string, sourceUrl: string): Canonic
     for (let j = i + 2; j < lines.length; j++) {
       const line = lines[j]!.trim();
       if (!line.startsWith("|")) break;
-      const cells = line
-        .slice(1, -1)
-        .split("|")
-        .map((c) => c.trim());
+      const cells = line.slice(1, -1).split("|").map((c) => c.trim());
       const size = cells[colMap.size]?.trim();
       if (!size) continue;
       const row: Row = {
@@ -3657,7 +3441,7 @@ export function parseDeterministic(markdown: string, sourceUrl: string): Canonic
         values: {
           chest: colMap.chest !== null ? parseCell(cells[colMap.chest] ?? "") : null,
           waist: colMap.waist !== null ? parseCell(cells[colMap.waist] ?? "") : null,
-          hip: colMap.hip !== null ? parseCell(cells[colMap.hip] ?? "") : null,
+          hip:   colMap.hip   !== null ? parseCell(cells[colMap.hip] ?? "")   : null,
         },
       };
       rows.push(row);
@@ -3715,7 +3499,6 @@ git commit -m "feat: deterministic markdown-table parser tier"
 ### Task 23: Claude extractor (prompt + parse + usage)
 
 **Files:**
-
 - Create: `src/domain/extraction/extractor-claude.ts`, update barrel
 - Test: `tests/integration/extractor-claude.test.ts`
 
@@ -3729,26 +3512,24 @@ import { AnthropicClient } from "../../src/infrastructure/external/anthropic";
 class FakeSdk {
   messages = {
     create: async () => ({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            chart: {
-              size_labels: ["S", "M"],
-              measurements: {
-                S: { chest_in: [36, 38], waist_in: [28, 30], hip_in: [36, 38] },
-                M: { chest_in: [38, 40], waist_in: [30, 32], hip_in: [38, 40] },
-              },
-              size_availability: [],
-              notes: "",
-              gender_specific: "unisex",
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          chart: {
+            size_labels: ["S", "M"],
+            measurements: {
+              S: { chest_in: [36, 38], waist_in: [28, 30], hip_in: [36, 38] },
+              M: { chest_in: [38, 40], waist_in: [30, 32], hip_in: [38, 40] },
             },
-            overall_confidence: 0.92,
-            per_field_confidence: { S: 0.95, M: 0.9 },
-            what_i_saw: "Standard unisex table on the page.",
-          }),
-        },
-      ],
+            size_availability: [],
+            notes: "",
+            gender_specific: "unisex",
+          },
+          overall_confidence: 0.92,
+          per_field_confidence: { S: 0.95, M: 0.9 },
+          what_i_saw: "Standard unisex table on the page.",
+        }),
+      }],
       usage: { input_tokens: 200, output_tokens: 100 },
     }),
   };
@@ -3789,20 +3570,15 @@ import { AnthropicClient, MODEL_SONNET } from "../../infrastructure/external/ant
 const ClaudeResponseSchema = z.object({
   chart: z.object({
     size_labels: z.array(z.string()),
-    measurements: z.record(
-      z.string(),
-      z.object({
-        chest_in: z.tuple([z.number(), z.number()]),
-        waist_in: z.tuple([z.number(), z.number()]),
-        hip_in: z.tuple([z.number(), z.number()]),
-      })
-    ),
-    size_availability: z.array(
-      z.object({
-        category: z.string(),
-        available_sizes: z.array(z.string()),
-      })
-    ),
+    measurements: z.record(z.string(), z.object({
+      chest_in: z.tuple([z.number(), z.number()]),
+      waist_in: z.tuple([z.number(), z.number()]),
+      hip_in: z.tuple([z.number(), z.number()]),
+    })),
+    size_availability: z.array(z.object({
+      category: z.string(),
+      available_sizes: z.array(z.string()),
+    })),
     notes: z.string().default(""),
     gender_specific: z.union([z.literal(false), z.enum(["men", "women", "unisex"])]),
   }),
@@ -3813,11 +3589,7 @@ const ClaudeResponseSchema = z.object({
 
 export interface PriorContext {
   lastAccepted: CanonicalSizeChart | null;
-  assessments: Array<{
-    authorSlug: string;
-    ratings: Record<string, number>;
-    proseMarkdown: string;
-  }>;
+  assessments: Array<{ authorSlug: string; ratings: Record<string, number>; proseMarkdown: string }>;
   corrections: Array<{ field: string; aiValue: unknown; correctedValue: unknown; note: string }>;
 }
 
@@ -3856,18 +3628,10 @@ Numbers are inches unless the page is clearly metric; convert cm to in if needed
 function buildUserText(input: ExtractInput): string {
   const prior = input.priorContext.lastAccepted;
   const corrections = input.priorContext.corrections
-    .map(
-      (c) =>
-        `- ${c.field}: was ${JSON.stringify(c.aiValue)}, corrected to ${JSON.stringify(c.correctedValue)} (${c.note})`
-    )
+    .map((c) => `- ${c.field}: was ${JSON.stringify(c.aiValue)}, corrected to ${JSON.stringify(c.correctedValue)} (${c.note})`)
     .join("\n");
   const assessmentSummary = input.priorContext.assessments
-    .map(
-      (a) =>
-        `- ${a.authorSlug}: ${Object.entries(a.ratings)
-          .map(([k, v]) => `${k}=${v}`)
-          .join(", ")}`
-    )
+    .map((a) => `- ${a.authorSlug}: ${Object.entries(a.ratings).map(([k, v]) => `${k}=${v}`).join(", ")}`)
     .join("\n");
 
   return `Source URL: ${input.sourceUrl}
@@ -3922,12 +3686,7 @@ export async function extractWithClaude(input: ExtractInput): Promise<ExtractOut
 export { CanonicalSizeChartSchema, parseCanonical, type CanonicalSizeChart } from "./canonical";
 export { validateStructural, type ValidationResult } from "./validators";
 export { parseDeterministic } from "./parser-deterministic";
-export {
-  extractWithClaude,
-  type PriorContext,
-  type ExtractInput,
-  type ExtractOutput,
-} from "./extractor-claude";
+export { extractWithClaude, type PriorContext, type ExtractInput, type ExtractOutput } from "./extractor-claude";
 ```
 
 - [ ] **Step 5: Run, verify pass + commit**
@@ -3943,7 +3702,6 @@ git commit -m "feat: Claude extractor with prior-context prompt"
 ### Task 24: Composite confidence calculator
 
 **Files:**
-
 - Create: `src/domain/extraction/confidence.ts`, update barrel
 - Test: `tests/unit/confidence.test.ts`
 
@@ -3966,11 +3724,7 @@ describe("compositeConfidence", () => {
   });
 
   test("clamps to [0,1]", () => {
-    const r = compositeConfidence({
-      claudeReported: 1.2,
-      structuralValidation: 1.2,
-      cohortOutlier: 1.2,
-    });
+    const r = compositeConfidence({ claudeReported: 1.2, structuralValidation: 1.2, cohortOutlier: 1.2 });
     expect(r.composite).toBe(1);
   });
 
@@ -4008,10 +3762,7 @@ function clamp01(n: number): number {
 }
 
 export function compositeConfidence(inputs: ConfidenceInputs): ConfidenceResult {
-  const composite =
-    clamp01(inputs.claudeReported) *
-    clamp01(inputs.structuralValidation) *
-    clamp01(inputs.cohortOutlier);
+  const composite = clamp01(inputs.claudeReported) * clamp01(inputs.structuralValidation) * clamp01(inputs.cohortOutlier);
   return { composite: clamp01(composite), breakdown: inputs };
 }
 ```
@@ -4022,12 +3773,7 @@ export function compositeConfidence(inputs: ConfidenceInputs): ConfidenceResult 
 export { CanonicalSizeChartSchema, parseCanonical, type CanonicalSizeChart } from "./canonical";
 export { validateStructural, type ValidationResult } from "./validators";
 export { parseDeterministic } from "./parser-deterministic";
-export {
-  extractWithClaude,
-  type PriorContext,
-  type ExtractInput,
-  type ExtractOutput,
-} from "./extractor-claude";
+export { extractWithClaude, type PriorContext, type ExtractInput, type ExtractOutput } from "./extractor-claude";
 export { compositeConfidence, type ConfidenceInputs, type ConfidenceResult } from "./confidence";
 ```
 
@@ -4044,7 +3790,6 @@ git commit -m "feat: composite confidence calculator"
 ### Task 25: Cohort outlier check + version routing + pipeline orchestrator
 
 **Files:**
-
 - Create: `src/domain/extraction/outlier.ts`, `src/domain/extraction/pipeline.ts`, `src/domain/extraction/prior-context.ts`, update barrel
 - Test: `tests/integration/extraction-pipeline.test.ts`
 
@@ -4056,25 +3801,12 @@ This task wires the steps from spec 6.1 into a single `runExtraction(input)` fun
 import type { CanonicalSizeChart } from "./canonical";
 
 export interface CohortSummary {
-  perSize: Record<
-    string,
-    {
-      chestMedian: number;
-      waistMedian: number;
-      hipMedian: number;
-      chestStdDev: number;
-      waistStdDev: number;
-      hipStdDev: number;
-    }
-  >;
+  perSize: Record<string, { chestMedian: number; waistMedian: number; hipMedian: number; chestStdDev: number; waistStdDev: number; hipStdDev: number }>;
 }
 
 const OUTLIER_PENALTY_PER_DIM = 0.1;
 
-export function cohortOutlierFactor(
-  chart: CanonicalSizeChart,
-  cohort: CohortSummary | null
-): number {
+export function cohortOutlierFactor(chart: CanonicalSizeChart, cohort: CohortSummary | null): number {
   if (!cohort) return 1.0;
   let penalty = 0;
   for (const label of chart.size_labels) {
@@ -4108,12 +3840,7 @@ export async function assemblePriorContext(db: DB, brandId: number): Promise<Pri
   const [last] = await db
     .select()
     .from(brandSizeChartVersions)
-    .where(
-      and(
-        eq(brandSizeChartVersions.brandId, brandId),
-        eq(brandSizeChartVersions.status, "accepted")
-      )
-    )
+    .where(and(eq(brandSizeChartVersions.brandId, brandId), eq(brandSizeChartVersions.status, "accepted")))
     .orderBy(desc(brandSizeChartVersions.extractedAt))
     .limit(1);
 
@@ -4153,20 +3880,9 @@ export interface PipelineDeps {
   rateLimiter: DomainRateLimiter;
   cohortSummary: CohortSummary | null;
   saveScreenshot: (bytes: Uint8Array, runId: number) => Promise<string>;
-  notifyPendingReview: (input: {
-    brandSlug: string;
-    brandName: string;
-    versionId: number;
-    reason: string;
-  }) => Promise<void>;
+  notifyPendingReview: (input: { brandSlug: string; brandName: string; versionId: number; reason: string }) => Promise<void>;
   publicBaseUrl: string;
-  recordUsage: (input: {
-    provider: "firecrawl" | "anthropic";
-    unitsUsed: number;
-    unitsKind: string;
-    estimatedCostUsd: number;
-    runId?: number;
-  }) => Promise<void>;
+  recordUsage: (input: { provider: "firecrawl" | "anthropic"; unitsUsed: number; unitsKind: string; estimatedCostUsd: number; runId?: number }) => Promise<void>;
 }
 
 export interface PipelineInput {
@@ -4206,21 +3922,12 @@ function countMeasurementDeltas(prev: CanonicalSizeChart | null, next: Canonical
   return count;
 }
 
-export async function runExtraction(
-  deps: PipelineDeps,
-  input: PipelineInput
-): Promise<PipelineOutcome> {
-  const [source] = await deps.db
-    .select()
-    .from(brandSources)
-    .where(eq(brandSources.id, input.brandSourceId))
-    .limit(1);
+export async function runExtraction(deps: PipelineDeps, input: PipelineInput): Promise<PipelineOutcome> {
+  const [source] = await deps.db.select().from(brandSources).where(eq(brandSources.id, input.brandSourceId)).limit(1);
   if (!source) throw new Error(`brand_source not found: ${input.brandSourceId}`);
 
   // 1. Rate gate
-  const host = (
-    await import("../../infrastructure/external/rate-limiter")
-  ).DomainRateLimiter.extractHost(source.url);
+  const host = (await import("../../infrastructure/external/rate-limiter")).DomainRateLimiter.extractHost(source.url);
   await deps.rateLimiter.wait(host);
   deps.rateLimiter.record(host);
 
@@ -4231,44 +3938,29 @@ export async function runExtraction(
   });
   const nowIso = new Date().toISOString();
   if (head.kind === "unchanged") {
-    await deps.db
-      .update(brandSources)
-      .set({ lastFetchedAt: nowIso })
-      .where(eq(brandSources.id, source.id));
+    await deps.db.update(brandSources).set({ lastFetchedAt: nowIso }).where(eq(brandSources.id, source.id));
     return { kind: "unchanged" };
   }
   const newHash = hashBody(head.body);
   if (source.lastFetchHash === newHash) {
-    await deps.db
-      .update(brandSources)
-      .set({
-        lastFetchedAt: nowIso,
-        lastEtag: head.etag,
-        lastModifiedHeader: head.lastModified,
-      })
-      .where(eq(brandSources.id, source.id));
-    return { kind: "unchanged" };
-  }
-  await deps.db
-    .update(brandSources)
-    .set({
+    await deps.db.update(brandSources).set({
       lastFetchedAt: nowIso,
-      lastChangedAt: nowIso,
-      lastFetchHash: newHash,
       lastEtag: head.etag,
       lastModifiedHeader: head.lastModified,
-    })
-    .where(eq(brandSources.id, source.id));
+    }).where(eq(brandSources.id, source.id));
+    return { kind: "unchanged" };
+  }
+  await deps.db.update(brandSources).set({
+    lastFetchedAt: nowIso,
+    lastChangedAt: nowIso,
+    lastFetchHash: newHash,
+    lastEtag: head.etag,
+    lastModifiedHeader: head.lastModified,
+  }).where(eq(brandSources.id, source.id));
 
   // 3. Render (paid)
   const render = await deps.firecrawl.render(source.url);
-  await deps.recordUsage({
-    provider: "firecrawl",
-    unitsUsed: 1,
-    unitsKind: "pages",
-    estimatedCostUsd: FIRECRAWL_COST_PER_PAGE,
-    runId: input.runId,
-  });
+  await deps.recordUsage({ provider: "firecrawl", unitsUsed: 1, unitsKind: "pages", estimatedCostUsd: FIRECRAWL_COST_PER_PAGE, runId: input.runId });
   await deps.saveScreenshot(render.screenshotBytes, input.runId);
 
   // 4. Prior context
@@ -4325,22 +4017,19 @@ export async function runExtraction(
       ? "accepted"
       : "pending_review";
 
-  const [version] = await deps.db
-    .insert(brandSizeChartVersions)
-    .values({
-      brandId: source.brandId,
-      brandSourceId: source.id,
-      sourceRunId: input.runId,
-      sizeChartJson: chart as unknown as Record<string, unknown>,
-      confidenceScore: conf.composite,
-      confidenceBreakdownJson: conf.breakdown,
-      status,
-      acceptedAt: status === "accepted" ? nowIso : null,
-      acceptedBy: status === "accepted" ? "auto" : null,
-      supersedesVersionId: null,
-      deltaFromPriorJson: priorContext.lastAccepted ? { fieldsChanged: deltaCount } : null,
-    })
-    .returning();
+  const [version] = await deps.db.insert(brandSizeChartVersions).values({
+    brandId: source.brandId,
+    brandSourceId: source.id,
+    sourceRunId: input.runId,
+    sizeChartJson: chart as unknown as Record<string, unknown>,
+    confidenceScore: conf.composite,
+    confidenceBreakdownJson: conf.breakdown,
+    status,
+    acceptedAt: status === "accepted" ? nowIso : null,
+    acceptedBy: status === "accepted" ? "auto" : null,
+    supersedesVersionId: null,
+    deltaFromPriorJson: priorContext.lastAccepted ? { fieldsChanged: deltaCount } : null,
+  }).returning();
 
   if (status === "accepted") {
     // Supersede the previous accepted version + update current pointer.
@@ -4348,29 +4037,20 @@ export async function runExtraction(
       await deps.db
         .update(brandSizeChartVersions)
         .set({ status: "superseded" })
-        .where(
-          and(
-            eq(brandSizeChartVersions.brandId, source.brandId),
-            eq(brandSizeChartVersions.status, "accepted")
-          )
-        );
+        .where(and(eq(brandSizeChartVersions.brandId, source.brandId), eq(brandSizeChartVersions.status, "accepted")));
       // Now re-mark the row we just inserted as accepted (the update above also touched it).
       await deps.db
         .update(brandSizeChartVersions)
         .set({ status: "accepted" })
         .where(eq(brandSizeChartVersions.id, version!.id));
     }
-    await deps.db
-      .update(brands)
-      .set({ currentSizeChartVersionId: version!.id })
-      .where(eq(brands.id, source.brandId));
+    await deps.db.update(brands).set({ currentSizeChartVersionId: version!.id }).where(eq(brands.id, source.brandId));
     return { kind: "auto_accepted", versionId: version!.id };
   }
 
   // 11. Notify on pending_review
   const [brand] = await deps.db.select().from(brands).where(eq(brands.id, source.brandId)).limit(1);
-  const reason =
-    conf.composite < LOW_CONFIDENCE_THRESHOLD ? "low confidence" : "size chart materially changed";
+  const reason = conf.composite < LOW_CONFIDENCE_THRESHOLD ? "low confidence" : "size chart materially changed";
   await deps.notifyPendingReview({
     brandSlug: brand!.slug,
     brandName: brand!.name,
@@ -4435,41 +4115,27 @@ const goodMarkdown = `
 | L    | 40-42 | 32-34 | 40-42 |
 `;
 
-const stubFetch = (responses: Record<string, Response>) => (url: RequestInfo | URL) => {
-  const k = url.toString();
-  const r = responses[k];
-  if (!r) throw new Error(`Unmocked: ${k}`);
-  return Promise.resolve(r);
-};
+const stubFetch = (responses: Record<string, Response>) =>
+  (url: RequestInfo | URL) => {
+    const k = url.toString();
+    const r = responses[k];
+    if (!r) throw new Error(`Unmocked: ${k}`);
+    return Promise.resolve(r);
+  };
 
 function makeDeps(db: ReturnType<typeof makeDb>, opts: Partial<PipelineDeps> = {}): PipelineDeps {
   const firecrawl = new FirecrawlClient({
     apiKey: "test",
     fetch: stubFetch({
-      "https://brand.com/size": new Response(goodMarkdown, {
-        status: 200,
-        headers: { etag: '"v1"' },
-      }),
-      "https://api.firecrawl.dev/v1/scrape": new Response(
-        JSON.stringify({
-          success: true,
-          data: { markdown: goodMarkdown, screenshot: "https://files.firecrawl.dev/s.png" },
-        }),
-        { status: 200, headers: { "content-type": "application/json" } }
-      ),
+      "https://brand.com/size": new Response(goodMarkdown, { status: 200, headers: { etag: '"v1"' } }),
+      "https://api.firecrawl.dev/v1/scrape": new Response(JSON.stringify({
+        success: true,
+        data: { markdown: goodMarkdown, screenshot: "https://files.firecrawl.dev/s.png" },
+      }), { status: 200, headers: { "content-type": "application/json" } }),
       "https://files.firecrawl.dev/s.png": new Response(new Uint8Array([0]), { status: 200 }),
     }),
   });
-  const anthropic = new AnthropicClient({
-    apiKey: "test",
-    sdkOverride: {
-      messages: {
-        create: async () => {
-          throw new Error("should not be called in deterministic path");
-        },
-      },
-    } as never,
-  });
+  const anthropic = new AnthropicClient({ apiKey: "test", sdkOverride: { messages: { create: async () => { throw new Error("should not be called in deterministic path"); } } } as never });
   const rateLimiter = new DomainRateLimiter({ minIntervalMs: 0 });
   return {
     db,
@@ -4491,14 +4157,8 @@ describe("runExtraction", () => {
 
   beforeEach(async () => {
     db = makeDb();
-    const [b] = await db
-      .insert(brands)
-      .values({ slug: "x", name: "X", primaryUrl: "https://brand.com" })
-      .returning();
-    const [s] = await db
-      .insert(brandSources)
-      .values({ brandId: b!.id, url: "https://brand.com/size", sourceType: "size_chart" })
-      .returning();
+    const [b] = await db.insert(brands).values({ slug: "x", name: "X", primaryUrl: "https://brand.com" }).returning();
+    const [s] = await db.insert(brandSources).values({ brandId: b!.id, url: "https://brand.com/size", sourceType: "size_chart" }).returning();
     sourceId = s!.id;
   });
 
@@ -4535,21 +4195,11 @@ describe("runExtraction", () => {
 export { CanonicalSizeChartSchema, parseCanonical, type CanonicalSizeChart } from "./canonical";
 export { validateStructural, type ValidationResult } from "./validators";
 export { parseDeterministic } from "./parser-deterministic";
-export {
-  extractWithClaude,
-  type PriorContext,
-  type ExtractInput,
-  type ExtractOutput,
-} from "./extractor-claude";
+export { extractWithClaude, type PriorContext, type ExtractInput, type ExtractOutput } from "./extractor-claude";
 export { compositeConfidence, type ConfidenceInputs, type ConfidenceResult } from "./confidence";
 export { cohortOutlierFactor, type CohortSummary } from "./outlier";
 export { assemblePriorContext } from "./prior-context";
-export {
-  runExtraction,
-  type PipelineDeps,
-  type PipelineInput,
-  type PipelineOutcome,
-} from "./pipeline";
+export { runExtraction, type PipelineDeps, type PipelineInput, type PipelineOutcome } from "./pipeline";
 ```
 
 - [ ] **Step 6: Run, verify pass + commit**
@@ -4565,7 +4215,6 @@ git commit -m "feat: extraction pipeline orchestrator"
 ### Task 26: Extraction job handlers + artifact store
 
 **Files:**
-
 - Create: `src/infrastructure/artifacts/store.ts`, `src/infrastructure/artifacts/index.ts`, `src/jobs/extract-brand-source.ts`, `src/jobs/detect-brand-source-changes.ts`, `src/jobs/sweep-all-brand-sources.ts`, `src/jobs/detect-stuck-jobs.ts`, `src/jobs/index.ts`
 - Test: `tests/integration/extract-job.test.ts`
 
@@ -4579,11 +4228,7 @@ import { join } from "node:path";
 export class ArtifactStore {
   constructor(private readonly basePath: string) {}
 
-  async save(
-    bytes: Uint8Array,
-    runId: number,
-    ext: string
-  ): Promise<{ filePath: string; sha256: string }> {
+  async save(bytes: Uint8Array, runId: number, ext: string): Promise<{ filePath: string; sha256: string }> {
     await mkdir(this.basePath, { recursive: true });
     const filename = `${runId}.${ext}`;
     const fullPath = join(this.basePath, filename);
@@ -4621,15 +4266,12 @@ export function makeExtractBrandSourceHandler(args: {
   return async (rawPayload, ctx) => {
     const { brandSourceId } = PayloadSchema.parse(rawPayload);
 
-    const [run] = await args.db
-      .insert(runs)
-      .values({
-        jobId: ctx.jobId,
-        status: "running",
-      })
-      .returning();
+    const [run] = await args.db.insert(runs).values({
+      jobId: ctx.jobId,
+      status: "running",
+    }).returning();
 
-    let saveScreenshot = async (bytes: Uint8Array, runId: number) => {
+    let saveScreenshot = (async (bytes: Uint8Array, runId: number) => {
       const stored = await args.artifactStore.save(bytes, runId, "png");
       await args.db.insert(runArtifacts).values({
         runId,
@@ -4639,29 +4281,23 @@ export function makeExtractBrandSourceHandler(args: {
         sha256: stored.sha256,
       });
       return stored.filePath;
-    };
+    });
 
     const deps: PipelineDeps = { ...args.buildPipelineDeps(run!.id), saveScreenshot };
 
     try {
       const outcome = await runExtraction(deps, { brandSourceId, runId: run!.id });
-      await args.db
-        .update(runs)
-        .set({
-          finishedAt: new Date().toISOString(),
-          status: "succeeded",
-          summaryJson: outcome,
-        })
-        .where(eq(runs.id, run!.id));
+      await args.db.update(runs).set({
+        finishedAt: new Date().toISOString(),
+        status: "succeeded",
+        summaryJson: outcome,
+      }).where(eq(runs.id, run!.id));
     } catch (err) {
-      await args.db
-        .update(runs)
-        .set({
-          finishedAt: new Date().toISOString(),
-          status: "failed",
-          summaryJson: { error: (err as Error).message },
-        })
-        .where(eq(runs.id, run!.id));
+      await args.db.update(runs).set({
+        finishedAt: new Date().toISOString(),
+        status: "failed",
+        summaryJson: { error: (err as Error).message },
+      }).where(eq(runs.id, run!.id));
       throw err;
     }
   };
@@ -4683,10 +4319,7 @@ const PayloadSchema = z.object({ brandId: z.number().int().positive() });
 export function makeDetectBrandSourceChangesHandler(args: { db: DB; queue: Queue }): JobHandler {
   return async (rawPayload) => {
     const { brandId } = PayloadSchema.parse(rawPayload);
-    const sources = await args.db
-      .select()
-      .from(brandSources)
-      .where(eq(brandSources.brandId, brandId));
+    const sources = await args.db.select().from(brandSources).where(eq(brandSources.brandId, brandId));
     for (const s of sources) {
       await args.queue.enqueue({
         jobType: "extract-brand-source",
@@ -4764,26 +4397,12 @@ export interface RegisterJobsArgs {
 }
 
 export function registerJobs(args: RegisterJobsArgs): void {
-  registerHandler(
-    "extract-brand-source",
-    makeExtractBrandSourceHandler({
-      db: args.db,
-      artifactStore: args.artifactStore,
-      buildPipelineDeps: args.buildPipelineDeps,
-    })
-  );
-  registerHandler(
-    "detect-brand-source-changes",
-    makeDetectBrandSourceChangesHandler({ db: args.db, queue: args.queue })
-  );
-  registerHandler(
-    "sweep-all-brand-sources",
-    makeSweepAllBrandSourcesHandler({ db: args.db, queue: args.queue })
-  );
-  registerHandler(
-    "detect-stuck-jobs",
-    makeDetectStuckJobsHandler({ db: args.db, pushover: args.pushover })
-  );
+  registerHandler("extract-brand-source", makeExtractBrandSourceHandler({
+    db: args.db, artifactStore: args.artifactStore, buildPipelineDeps: args.buildPipelineDeps,
+  }));
+  registerHandler("detect-brand-source-changes", makeDetectBrandSourceChangesHandler({ db: args.db, queue: args.queue }));
+  registerHandler("sweep-all-brand-sources", makeSweepAllBrandSourcesHandler({ db: args.db, queue: args.queue }));
+  registerHandler("detect-stuck-jobs", makeDetectStuckJobsHandler({ db: args.db, pushover: args.pushover }));
 }
 ```
 
@@ -4870,54 +4489,26 @@ describe("extract-brand-source job end-to-end", () => {
   test("runs the pipeline and creates an accepted version row", async () => {
     const db = makeDb();
     const queue = new Queue(db);
-    const [b] = await db
-      .insert(brands)
-      .values({ slug: "x", name: "X", primaryUrl: "https://brand.com" })
-      .returning();
-    const [s] = await db
-      .insert(brandSources)
-      .values({ brandId: b!.id, url: "https://brand.com/size", sourceType: "size_chart" })
-      .returning();
+    const [b] = await db.insert(brands).values({ slug: "x", name: "X", primaryUrl: "https://brand.com" }).returning();
+    const [s] = await db.insert(brandSources).values({ brandId: b!.id, url: "https://brand.com/size", sourceType: "size_chart" }).returning();
 
     const stubFetch = ((url: RequestInfo | URL) => {
       const k = url.toString();
       if (k === "https://brand.com/size")
-        return Promise.resolve(
-          new Response(goodMarkdown, { status: 200, headers: { etag: '"v1"' } })
-        );
+        return Promise.resolve(new Response(goodMarkdown, { status: 200, headers: { etag: '"v1"' } }));
       throw new Error(`Unmocked: ${k}`);
     }) as never;
 
     const firecrawl = new FirecrawlClient({ apiKey: "test", fetch: stubFetch });
-    const anthropic = new AnthropicClient({
-      apiKey: "test",
-      sdkOverride: {
-        messages: {
-          create: async () => {
-            throw new Error("not called");
-          },
-        },
-      } as never,
-    });
-    const pushover = new PushoverClient({
-      userKey: "u",
-      appToken: "t",
-      fetch: (async () => new Response("{}", { status: 200 })) as never,
-    });
+    const anthropic = new AnthropicClient({ apiKey: "test", sdkOverride: { messages: { create: async () => { throw new Error("not called"); } } } as never });
+    const pushover = new PushoverClient({ userKey: "u", appToken: "t", fetch: (async () => new Response("{}", { status: 200 })) as never });
     const artifactStore = new ArtifactStore(tmpDir);
     const rateLimiter = new DomainRateLimiter({ minIntervalMs: 0 });
 
     registerJobs({
-      db,
-      queue,
-      artifactStore,
-      pushover,
+      db, queue, artifactStore, pushover,
       buildPipelineDeps: (runId) => ({
-        db,
-        firecrawl,
-        anthropic,
-        rateLimiter,
-        cohortSummary: null,
+        db, firecrawl, anthropic, rateLimiter, cohortSummary: null,
         saveScreenshot: async () => "x.png",
         notifyPendingReview: async () => undefined,
         publicBaseUrl: "http://localhost:3000",
@@ -4934,10 +4525,7 @@ describe("extract-brand-source job end-to-end", () => {
     });
     await new Promise((r) => setTimeout(r, 300));
 
-    const [version] = await db
-      .select()
-      .from(brandSizeChartVersions)
-      .where(eq(brandSizeChartVersions.brandId, b!.id));
+    const [version] = await db.select().from(brandSizeChartVersions).where(eq(brandSizeChartVersions.brandId, b!.id));
     expect(version?.status).toBe("accepted");
   });
 });
@@ -4951,6 +4539,7 @@ git add src/infrastructure/artifacts/ src/jobs/ tests/integration/extract-job.te
 git commit -m "feat: extraction job handlers + artifact store"
 ```
 
+
 ---
 
 ## Group F — Scoring Engine
@@ -4960,7 +4549,6 @@ Phase 1 implements two of five dimensions: `size_range_breadth` and `measurement
 ### Task 27: Scoring config + cohort summary computation
 
 **Files:**
-
 - Create: `src/domain/scoring/config.ts`, `src/domain/scoring/cohort.ts`, `src/domain/scoring/index.ts`
 - Test: `tests/integration/cohort-summary.test.ts`
 
@@ -4971,10 +4559,10 @@ export const SCORING_CONFIG_VERSION = "v1.0";
 
 export const WEIGHTS = {
   size_range_breadth: 0.25,
-  measurement_accuracy: 0.2,
-  range_parity: 0.3, // null in phase 1
-  pricing_equity: 0.15, // null in phase 1
-  colorway_equity: 0.1, // null in phase 1
+  measurement_accuracy: 0.20,
+  range_parity: 0.30,        // null in phase 1
+  pricing_equity: 0.15,      // null in phase 1
+  colorway_equity: 0.10,     // null in phase 1
 } as const;
 
 export type ScoreDimension = keyof typeof WEIGHTS;
@@ -4993,11 +4581,7 @@ import { describe, test, expect } from "bun:test";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../../src/infrastructure/db/schema";
-import {
-  brands,
-  brandSizeChartVersions,
-  cohortSummaries,
-} from "../../src/infrastructure/db/schema";
+import { brands, brandSizeChartVersions, cohortSummaries } from "../../src/infrastructure/db/schema";
 import { recomputeCohortSummary } from "../../src/domain/scoring/cohort";
 import { eq } from "drizzle-orm";
 
@@ -5024,66 +4608,32 @@ function makeDb() {
   return drizzle(sqlite, { schema });
 }
 
-async function seedBrandWithChart(
-  db: ReturnType<typeof makeDb>,
-  slug: string,
-  measurements: Record<
-    string,
-    { chest: [number, number]; waist: [number, number]; hip: [number, number] }
-  >
-) {
-  const [b] = await db
-    .insert(brands)
-    .values({ slug, name: slug, primaryUrl: `https://${slug}.com` })
-    .returning();
+async function seedBrandWithChart(db: ReturnType<typeof makeDb>, slug: string, measurements: Record<string, { chest: [number, number]; waist: [number, number]; hip: [number, number] }>) {
+  const [b] = await db.insert(brands).values({ slug, name: slug, primaryUrl: `https://${slug}.com` }).returning();
   const chart = {
     source_url: `https://${slug}.com/size`,
     extracted_at: new Date().toISOString(),
     method: "claude",
     size_labels: Object.keys(measurements),
-    measurements: Object.fromEntries(
-      Object.entries(measurements).map(([k, v]) => [
-        k,
-        { chest_in: v.chest, waist_in: v.waist, hip_in: v.hip },
-      ])
-    ),
+    measurements: Object.fromEntries(Object.entries(measurements).map(([k, v]) => [k, { chest_in: v.chest, waist_in: v.waist, hip_in: v.hip }])),
     size_availability: [],
     notes: "",
     gender_specific: false,
   };
-  const [v] = await db
-    .insert(brandSizeChartVersions)
-    .values({
-      brandId: b!.id,
-      brandSourceId: 1,
-      sizeChartJson: chart,
-      confidenceScore: 0.9,
-      confidenceBreakdownJson: { claudeReported: 0.9, structuralValidation: 1, cohortOutlier: 1 },
-      status: "accepted",
-      acceptedAt: new Date().toISOString(),
-      acceptedBy: "auto",
-    })
-    .returning();
+  const [v] = await db.insert(brandSizeChartVersions).values({
+    brandId: b!.id, brandSourceId: 1, sizeChartJson: chart, confidenceScore: 0.9,
+    confidenceBreakdownJson: { claudeReported: 0.9, structuralValidation: 1, cohortOutlier: 1 },
+    status: "accepted", acceptedAt: new Date().toISOString(), acceptedBy: "auto",
+  }).returning();
   await db.update(brands).set({ currentSizeChartVersionId: v!.id }).where(eq(brands.id, b!.id));
 }
 
 describe("recomputeCohortSummary", () => {
   test("aggregates per-size medians + breadth from accepted versions", async () => {
     const db = makeDb();
-    await seedBrandWithChart(db, "a", {
-      S: { chest: [36, 38], waist: [28, 30], hip: [36, 38] },
-      M: { chest: [38, 40], waist: [30, 32], hip: [38, 40] },
-    });
-    await seedBrandWithChart(db, "b", {
-      S: { chest: [34, 36], waist: [26, 28], hip: [34, 36] },
-      M: { chest: [36, 38], waist: [28, 30], hip: [36, 38] },
-      L: { chest: [38, 40], waist: [30, 32], hip: [38, 40] },
-    });
-    await seedBrandWithChart(db, "c", {
-      S: { chest: [38, 40], waist: [30, 32], hip: [38, 40] },
-      M: { chest: [40, 42], waist: [32, 34], hip: [40, 42] },
-      XL: { chest: [44, 46], waist: [36, 38], hip: [44, 46] },
-    });
+    await seedBrandWithChart(db, "a", { S: { chest: [36, 38], waist: [28, 30], hip: [36, 38] }, M: { chest: [38, 40], waist: [30, 32], hip: [38, 40] } });
+    await seedBrandWithChart(db, "b", { S: { chest: [34, 36], waist: [26, 28], hip: [34, 36] }, M: { chest: [36, 38], waist: [28, 30], hip: [36, 38] }, L: { chest: [38, 40], waist: [30, 32], hip: [38, 40] } });
+    await seedBrandWithChart(db, "c", { S: { chest: [38, 40], waist: [30, 32], hip: [38, 40] }, M: { chest: [40, 42], waist: [32, 34], hip: [40, 42] }, XL: { chest: [44, 46], waist: [36, 38], hip: [44, 46] } });
 
     const id = await recomputeCohortSummary({ db, trigger: "manual" });
 
@@ -5158,10 +4708,7 @@ export async function recomputeCohortSummary(opts: RecomputeOptions): Promise<nu
   const rows = await opts.db
     .select({ chart: brandSizeChartVersions.sizeChartJson })
     .from(brands)
-    .innerJoin(
-      brandSizeChartVersions,
-      eq(brands.currentSizeChartVersionId, brandSizeChartVersions.id)
-    )
+    .innerJoin(brandSizeChartVersions, eq(brands.currentSizeChartVersionId, brandSizeChartVersions.id))
     .where(isNotNull(brands.currentSizeChartVersionId));
 
   const perSizeCollect: Record<string, { chest: number[]; waist: number[]; hip: number[] }> = {};
@@ -5199,15 +4746,12 @@ export async function recomputeCohortSummary(opts: RecomputeOptions): Promise<nu
     breadthMax: sortedBreadths[sortedBreadths.length - 1] ?? 0,
   };
 
-  const [row] = await opts.db
-    .insert(cohortSummaries)
-    .values({
-      scoringConfigVersion: SCORING_CONFIG_VERSION,
-      brandCount: rows.length,
-      summaryJson: summary as unknown as Record<string, unknown>,
-      trigger: opts.trigger,
-    })
-    .returning();
+  const [row] = await opts.db.insert(cohortSummaries).values({
+    scoringConfigVersion: SCORING_CONFIG_VERSION,
+    brandCount: rows.length,
+    summaryJson: summary as unknown as Record<string, unknown>,
+    trigger: opts.trigger,
+  }).returning();
 
   return row!.id;
 }
@@ -5217,12 +4761,7 @@ export async function recomputeCohortSummary(opts: RecomputeOptions): Promise<nu
 
 ```typescript
 export * from "./config";
-export {
-  recomputeCohortSummary,
-  type CohortSummaryJson,
-  type CohortSummaryPerSize,
-  type RecomputeOptions,
-} from "./cohort";
+export { recomputeCohortSummary, type CohortSummaryJson, type CohortSummaryPerSize, type RecomputeOptions } from "./cohort";
 ```
 
 - [ ] **Step 6: Run, verify pass + commit**
@@ -5238,7 +4777,6 @@ git commit -m "feat: scoring config + cohort summary recompute"
 ### Task 28: Dimension scores + normalized composite
 
 **Files:**
-
 - Create: `src/domain/scoring/breadth.ts`, `src/domain/scoring/accuracy.ts`, `src/domain/scoring/composite.ts`, update barrel
 - Test: `tests/unit/scoring-dimensions.test.ts`
 
@@ -5255,30 +4793,9 @@ import type { CanonicalSizeChart } from "../../src/domain/extraction";
 
 const cohort: CohortSummaryJson = {
   perSize: {
-    S: {
-      chestMedian: 36,
-      waistMedian: 28,
-      hipMedian: 36,
-      chestStdDev: 1,
-      waistStdDev: 1,
-      hipStdDev: 1,
-    },
-    M: {
-      chestMedian: 38,
-      waistMedian: 30,
-      hipMedian: 38,
-      chestStdDev: 1,
-      waistStdDev: 1,
-      hipStdDev: 1,
-    },
-    L: {
-      chestMedian: 40,
-      waistMedian: 32,
-      hipMedian: 40,
-      chestStdDev: 1,
-      waistStdDev: 1,
-      hipStdDev: 1,
-    },
+    S: { chestMedian: 36, waistMedian: 28, hipMedian: 36, chestStdDev: 1, waistStdDev: 1, hipStdDev: 1 },
+    M: { chestMedian: 38, waistMedian: 30, hipMedian: 38, chestStdDev: 1, waistStdDev: 1, hipStdDev: 1 },
+    L: { chestMedian: 40, waistMedian: 32, hipMedian: 40, chestStdDev: 1, waistStdDev: 1, hipStdDev: 1 },
   },
   breadths: [3, 4, 5, 6, 7],
   breadthMedian: 5,
@@ -5287,12 +4804,7 @@ const cohort: CohortSummaryJson = {
 };
 
 const wideBrand: CanonicalSizeChart = {
-  source_url: "x",
-  extracted_at: "x",
-  method: "claude",
-  size_availability: [],
-  notes: "",
-  gender_specific: false,
+  source_url: "x", extracted_at: "x", method: "claude", size_availability: [], notes: "", gender_specific: false,
   size_labels: ["XS", "S", "M", "L", "XL", "2XL", "3XL"],
   measurements: {
     XS: { chest_in: [34, 35], waist_in: [26, 27], hip_in: [34, 35] },
@@ -5306,12 +4818,7 @@ const wideBrand: CanonicalSizeChart = {
 };
 
 const narrowBrand: CanonicalSizeChart = {
-  source_url: "y",
-  extracted_at: "y",
-  method: "claude",
-  size_availability: [],
-  notes: "",
-  gender_specific: false,
+  source_url: "y", extracted_at: "y", method: "claude", size_availability: [], notes: "", gender_specific: false,
   size_labels: ["S", "M", "L"],
   measurements: {
     S: { chest_in: [36, 37], waist_in: [28, 29], hip_in: [36, 37] },
@@ -5331,8 +4838,7 @@ describe("scoreBreadth", () => {
 
   test("cohort median brand scores 5", () => {
     const median: CanonicalSizeChart = {
-      ...narrowBrand,
-      size_labels: ["S", "M", "L", "XL", "2XL"],
+      ...narrowBrand, size_labels: ["S", "M", "L", "XL", "2XL"],
       measurements: {
         S: { chest_in: [36, 37], waist_in: [28, 29], hip_in: [36, 37] },
         M: { chest_in: [38, 39], waist_in: [30, 31], hip_in: [38, 39] },
@@ -5348,12 +4854,7 @@ describe("scoreBreadth", () => {
 describe("scoreAccuracy", () => {
   test("brand exactly matching cohort medians scores 10", () => {
     const exact: CanonicalSizeChart = {
-      source_url: "z",
-      extracted_at: "z",
-      method: "claude",
-      size_availability: [],
-      notes: "",
-      gender_specific: false,
+      source_url: "z", extracted_at: "z", method: "claude", size_availability: [], notes: "", gender_specific: false,
       size_labels: ["S", "M", "L"],
       measurements: {
         S: { chest_in: [36, 36], waist_in: [28, 28], hip_in: [36, 36] },
@@ -5366,12 +4867,7 @@ describe("scoreAccuracy", () => {
 
   test("brand 5 inches off scores lower", () => {
     const off: CanonicalSizeChart = {
-      source_url: "z",
-      extracted_at: "z",
-      method: "claude",
-      size_availability: [],
-      notes: "",
-      gender_specific: false,
+      source_url: "z", extracted_at: "z", method: "claude", size_availability: [], notes: "", gender_specific: false,
       size_labels: ["S"],
       measurements: { S: { chest_in: [41, 41], waist_in: [33, 33], hip_in: [41, 41] } },
     };
@@ -5396,25 +4892,15 @@ describe("computeComposite", () => {
 
   test("with all five dimensions yields a normal weighted average", () => {
     const r = computeComposite({
-      size_range_breadth: 10,
-      measurement_accuracy: 10,
-      range_parity: 10,
-      pricing_equity: 10,
-      colorway_equity: 10,
+      size_range_breadth: 10, measurement_accuracy: 10, range_parity: 10, pricing_equity: 10, colorway_equity: 10,
     });
     expect(r).toBeCloseTo(10);
   });
 
   test("returns null when all dimensions are null", () => {
-    expect(
-      computeComposite({
-        size_range_breadth: null,
-        measurement_accuracy: null,
-        range_parity: null,
-        pricing_equity: null,
-        colorway_equity: null,
-      })
-    ).toBeNull();
+    expect(computeComposite({
+      size_range_breadth: null, measurement_accuracy: null, range_parity: null, pricing_equity: null, colorway_equity: null,
+    })).toBeNull();
   });
 });
 ```
@@ -5433,8 +4919,7 @@ import type { CohortSummaryJson } from "./cohort";
 
 export function scoreBreadth(chart: CanonicalSizeChart, cohort: CohortSummaryJson): number {
   if (cohort.breadthMax === cohort.breadthMin) return 5;
-  const ratio =
-    (chart.size_labels.length - cohort.breadthMin) / (cohort.breadthMax - cohort.breadthMin);
+  const ratio = (chart.size_labels.length - cohort.breadthMin) / (cohort.breadthMax - cohort.breadthMin);
   return Math.max(0, Math.min(10, ratio * 10));
 }
 ```
@@ -5492,12 +4977,7 @@ export function computeComposite(scores: DimensionScores): number | null {
 
 ```typescript
 export * from "./config";
-export {
-  recomputeCohortSummary,
-  type CohortSummaryJson,
-  type CohortSummaryPerSize,
-  type RecomputeOptions,
-} from "./cohort";
+export { recomputeCohortSummary, type CohortSummaryJson, type CohortSummaryPerSize, type RecomputeOptions } from "./cohort";
 export { scoreBreadth } from "./breadth";
 export { scoreAccuracy } from "./accuracy";
 export { computeComposite, type DimensionScores } from "./composite";
@@ -5516,7 +4996,6 @@ git commit -m "feat: dimension scoring + normalized composite"
 ### Task 29: Snapshot promotion + score-brand job
 
 **Files:**
-
 - Create: `src/domain/scoring/snapshot.ts`, `src/jobs/score-brand.ts`, `src/jobs/recompute-cohort-summary.ts`, update barrels
 - Test: `tests/integration/snapshot-promotion.test.ts`
 
@@ -5527,11 +5006,7 @@ import { describe, test, expect, beforeEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../../src/infrastructure/db/schema";
-import {
-  brandScoreHistory,
-  brandScoreSnapshots,
-  cohortSummaries,
-} from "../../src/infrastructure/db/schema";
+import { brandScoreHistory, brandScoreSnapshots, cohortSummaries } from "../../src/infrastructure/db/schema";
 import { promoteSnapshotIfWarranted } from "../../src/domain/scoring/snapshot";
 
 function makeDb() {
@@ -5554,22 +5029,13 @@ function makeDb() {
 }
 
 async function seedHistory(db: ReturnType<typeof makeDb>, brandId: number, composites: number[]) {
-  const [c] = await db
-    .insert(cohortSummaries)
-    .values({ scoringConfigVersion: "v1.0", brandCount: 5, summaryJson: {}, trigger: "scheduled" })
-    .returning();
+  const [c] = await db.insert(cohortSummaries).values({ scoringConfigVersion: "v1.0", brandCount: 5, summaryJson: {}, trigger: "scheduled" }).returning();
   const ids: number[] = [];
   for (const composite of composites) {
-    const [h] = await db
-      .insert(brandScoreHistory)
-      .values({
-        brandId,
-        scoringConfigVersion: "v1.0",
-        cohortSummaryId: c!.id,
-        scoresJson: { composite },
-        inputsJson: { sizeChartVersionId: 1 },
-      })
-      .returning();
+    const [h] = await db.insert(brandScoreHistory).values({
+      brandId, scoringConfigVersion: "v1.0", cohortSummaryId: c!.id,
+      scoresJson: { composite }, inputsJson: { sizeChartVersionId: 1 },
+    }).returning();
     ids.push(h!.id);
   }
   return { cohortId: c!.id, historyIds: ids };
@@ -5580,11 +5046,7 @@ describe("promoteSnapshotIfWarranted", () => {
     const db = makeDb();
     const { cohortId, historyIds } = await seedHistory(db, 1, [7.5]);
     const result = await promoteSnapshotIfWarranted({
-      db,
-      brandId: 1,
-      latestHistoryId: historyIds[0]!,
-      cohortSummaryId: cohortId,
-      cohortBrandCount: 5,
+      db, brandId: 1, latestHistoryId: historyIds[0]!, cohortSummaryId: cohortId, cohortBrandCount: 5,
     });
     expect(result.promoted).toBe(true);
     const snaps = await db.select().from(brandScoreSnapshots);
@@ -5595,18 +5057,10 @@ describe("promoteSnapshotIfWarranted", () => {
     const db = makeDb();
     const seeded = await seedHistory(db, 1, [7.5, 7.6, 7.55, 7.6]);
     await promoteSnapshotIfWarranted({
-      db,
-      brandId: 1,
-      latestHistoryId: seeded.historyIds[0]!,
-      cohortSummaryId: seeded.cohortId,
-      cohortBrandCount: 5,
+      db, brandId: 1, latestHistoryId: seeded.historyIds[0]!, cohortSummaryId: seeded.cohortId, cohortBrandCount: 5,
     });
     const r = await promoteSnapshotIfWarranted({
-      db,
-      brandId: 1,
-      latestHistoryId: seeded.historyIds[3]!,
-      cohortSummaryId: seeded.cohortId,
-      cohortBrandCount: 5,
+      db, brandId: 1, latestHistoryId: seeded.historyIds[3]!, cohortSummaryId: seeded.cohortId, cohortBrandCount: 5,
     });
     expect(r.promoted).toBe(false);
   });
@@ -5616,18 +5070,10 @@ describe("promoteSnapshotIfWarranted", () => {
     const seeded = await seedHistory(db, 1, [7.0, 7.5, 8.0, 8.5]);
     // First promote initial
     await promoteSnapshotIfWarranted({
-      db,
-      brandId: 1,
-      latestHistoryId: seeded.historyIds[0]!,
-      cohortSummaryId: seeded.cohortId,
-      cohortBrandCount: 5,
+      db, brandId: 1, latestHistoryId: seeded.historyIds[0]!, cohortSummaryId: seeded.cohortId, cohortBrandCount: 5,
     });
     const r = await promoteSnapshotIfWarranted({
-      db,
-      brandId: 1,
-      latestHistoryId: seeded.historyIds[3]!,
-      cohortSummaryId: seeded.cohortId,
-      cohortBrandCount: 5,
+      db, brandId: 1, latestHistoryId: seeded.historyIds[3]!, cohortSummaryId: seeded.cohortId, cohortBrandCount: 5,
     });
     expect(r.promoted).toBe(true);
   });
@@ -5636,11 +5082,7 @@ describe("promoteSnapshotIfWarranted", () => {
     const db = makeDb();
     const seeded = await seedHistory(db, 1, [7.5]);
     await promoteSnapshotIfWarranted({
-      db,
-      brandId: 1,
-      latestHistoryId: seeded.historyIds[0]!,
-      cohortSummaryId: seeded.cohortId,
-      cohortBrandCount: 3,
+      db, brandId: 1, latestHistoryId: seeded.historyIds[0]!, cohortSummaryId: seeded.cohortId, cohortBrandCount: 3,
     });
     const snaps = await db.select().from(brandScoreSnapshots);
     expect(snaps[0]?.isPublic).toBe(false);
@@ -5660,12 +5102,7 @@ bun test tests/integration/snapshot-promotion.test.ts
 import { desc, eq } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { brandScoreHistory, brandScoreSnapshots } from "../../infrastructure/db/schema";
-import {
-  MIN_COHORT_SIZE_FOR_PUBLIC,
-  SNAPSHOT_PROMOTION_DELTA,
-  SUSTAINED_DIRECTION_WINDOW,
-  SNAPSHOT_HEARTBEAT_DAYS,
-} from "./config";
+import { MIN_COHORT_SIZE_FOR_PUBLIC, SNAPSHOT_PROMOTION_DELTA, SUSTAINED_DIRECTION_WINDOW, SNAPSHOT_HEARTBEAT_DAYS } from "./config";
 
 export interface PromoteOptions {
   db: DB;
@@ -5685,11 +5122,7 @@ function getComposite(scoresJson: unknown): number {
 }
 
 export async function promoteSnapshotIfWarranted(opts: PromoteOptions): Promise<PromoteResult> {
-  const [latest] = await opts.db
-    .select()
-    .from(brandScoreHistory)
-    .where(eq(brandScoreHistory.id, opts.latestHistoryId))
-    .limit(1);
+  const [latest] = await opts.db.select().from(brandScoreHistory).where(eq(brandScoreHistory.id, opts.latestHistoryId)).limit(1);
   if (!latest) return { promoted: false, reason: "no_change" };
 
   const isPublic = opts.cohortBrandCount >= MIN_COHORT_SIZE_FOR_PUBLIC;
@@ -5715,8 +5148,7 @@ export async function promoteSnapshotIfWarranted(opts: PromoteOptions): Promise<
 
   if (!lastSnapshot) return insertSnapshot("first");
 
-  const heartbeatStale =
-    Date.now() - new Date(lastSnapshot.snapshotAt).getTime() > SNAPSHOT_HEARTBEAT_DAYS * 86_400_000;
+  const heartbeatStale = (Date.now() - new Date(lastSnapshot.snapshotAt).getTime()) > SNAPSHOT_HEARTBEAT_DAYS * 86_400_000;
   if (heartbeatStale) return insertSnapshot("heartbeat");
 
   const recent = await opts.db
@@ -5730,9 +5162,8 @@ export async function promoteSnapshotIfWarranted(opts: PromoteOptions): Promise<
   const composites = recent.map((r) => getComposite(r.scoresJson));
   const lastSnapComposite = getComposite(lastSnapshot.scoresJson);
   const delta = Math.abs(currentComposite - lastSnapComposite);
-  const allIncreasing =
-    composites.every((v, i) => i === 0 || v <= composites[i - 1]!) === false &&
-    composites.every((v, i) => i === 0 || composites[i - 1]! < v);
+  const allIncreasing = composites.every((v, i) => i === 0 || v <= composites[i - 1]!) === false
+    && composites.every((v, i) => i === 0 || composites[i - 1]! < v);
   const allDecreasing = composites.every((v, i) => i === 0 || composites[i - 1]! > v);
 
   if (delta >= SNAPSHOT_PROMOTION_DELTA && (allIncreasing || allDecreasing)) {
@@ -5746,12 +5177,7 @@ export async function promoteSnapshotIfWarranted(opts: PromoteOptions): Promise<
 
 ```typescript
 export * from "./config";
-export {
-  recomputeCohortSummary,
-  type CohortSummaryJson,
-  type CohortSummaryPerSize,
-  type RecomputeOptions,
-} from "./cohort";
+export { recomputeCohortSummary, type CohortSummaryJson, type CohortSummaryPerSize, type RecomputeOptions } from "./cohort";
 export { scoreBreadth } from "./breadth";
 export { scoreAccuracy } from "./accuracy";
 export { computeComposite, type DimensionScores } from "./composite";
@@ -5765,20 +5191,8 @@ import { z } from "zod";
 import { desc, eq } from "drizzle-orm";
 import type { JobHandler } from "../infrastructure/queue";
 import type { DB } from "../infrastructure/db";
-import {
-  brandSizeChartVersions,
-  cohortSummaries,
-  brandScoreHistory,
-  brands,
-} from "../infrastructure/db/schema";
-import {
-  scoreBreadth,
-  scoreAccuracy,
-  computeComposite,
-  promoteSnapshotIfWarranted,
-  SCORING_CONFIG_VERSION,
-  type CohortSummaryJson,
-} from "../domain/scoring";
+import { brandSizeChartVersions, cohortSummaries, brandScoreHistory, brands } from "../infrastructure/db/schema";
+import { scoreBreadth, scoreAccuracy, computeComposite, promoteSnapshotIfWarranted, SCORING_CONFIG_VERSION, type CohortSummaryJson } from "../domain/scoring";
 import type { CanonicalSizeChart } from "../domain/extraction";
 
 const PayloadSchema = z.object({ brandId: z.number().int().positive() });
@@ -5790,18 +5204,10 @@ export function makeScoreBrandHandler(args: { db: DB }): JobHandler {
     const [brand] = await args.db.select().from(brands).where(eq(brands.id, brandId)).limit(1);
     if (!brand?.currentSizeChartVersionId) return;
 
-    const [version] = await args.db
-      .select()
-      .from(brandSizeChartVersions)
-      .where(eq(brandSizeChartVersions.id, brand.currentSizeChartVersionId))
-      .limit(1);
+    const [version] = await args.db.select().from(brandSizeChartVersions).where(eq(brandSizeChartVersions.id, brand.currentSizeChartVersionId)).limit(1);
     if (!version) return;
 
-    const [cohort] = await args.db
-      .select()
-      .from(cohortSummaries)
-      .orderBy(desc(cohortSummaries.computedAt))
-      .limit(1);
+    const [cohort] = await args.db.select().from(cohortSummaries).orderBy(desc(cohortSummaries.computedAt)).limit(1);
     if (!cohort) return;
 
     const chart = version.sizeChartJson as unknown as CanonicalSizeChart;
@@ -5816,16 +5222,13 @@ export function makeScoreBrandHandler(args: { db: DB }): JobHandler {
     } as const;
     const composite = computeComposite(dimensionScores);
 
-    const [history] = await args.db
-      .insert(brandScoreHistory)
-      .values({
-        brandId,
-        scoringConfigVersion: SCORING_CONFIG_VERSION,
-        cohortSummaryId: cohort.id,
-        scoresJson: { ...dimensionScores, composite },
-        inputsJson: { sizeChartVersionId: version.id },
-      })
-      .returning();
+    const [history] = await args.db.insert(brandScoreHistory).values({
+      brandId,
+      scoringConfigVersion: SCORING_CONFIG_VERSION,
+      cohortSummaryId: cohort.id,
+      scoresJson: { ...dimensionScores, composite },
+      inputsJson: { sizeChartVersionId: version.id },
+    }).returning();
 
     await promoteSnapshotIfWarranted({
       db: args.db,
@@ -5852,9 +5255,7 @@ export function makeRecomputeCohortSummaryHandler(args: { db: DB; queue: Queue }
   return async () => {
     await recomputeCohortSummary({ db: args.db, trigger: "scheduled" });
     // Enqueue score-brand for every brand with a current size chart.
-    const rows = await args.db.execute(
-      sql`SELECT id FROM brands WHERE current_size_chart_version_id IS NOT NULL`
-    );
+    const rows = await args.db.execute(sql`SELECT id FROM brands WHERE current_size_chart_version_id IS NOT NULL`);
     for (const r of rows as unknown as Array<{ id: number }>) {
       await args.queue.enqueue({
         jobType: "score-brand",
@@ -5890,31 +5291,14 @@ export interface RegisterJobsArgs {
 }
 
 export function registerJobs(args: RegisterJobsArgs): void {
-  registerHandler(
-    "extract-brand-source",
-    makeExtractBrandSourceHandler({
-      db: args.db,
-      artifactStore: args.artifactStore,
-      buildPipelineDeps: args.buildPipelineDeps,
-    })
-  );
-  registerHandler(
-    "detect-brand-source-changes",
-    makeDetectBrandSourceChangesHandler({ db: args.db, queue: args.queue })
-  );
-  registerHandler(
-    "sweep-all-brand-sources",
-    makeSweepAllBrandSourcesHandler({ db: args.db, queue: args.queue })
-  );
-  registerHandler(
-    "detect-stuck-jobs",
-    makeDetectStuckJobsHandler({ db: args.db, pushover: args.pushover })
-  );
+  registerHandler("extract-brand-source", makeExtractBrandSourceHandler({
+    db: args.db, artifactStore: args.artifactStore, buildPipelineDeps: args.buildPipelineDeps,
+  }));
+  registerHandler("detect-brand-source-changes", makeDetectBrandSourceChangesHandler({ db: args.db, queue: args.queue }));
+  registerHandler("sweep-all-brand-sources", makeSweepAllBrandSourcesHandler({ db: args.db, queue: args.queue }));
+  registerHandler("detect-stuck-jobs", makeDetectStuckJobsHandler({ db: args.db, pushover: args.pushover }));
   registerHandler("score-brand", makeScoreBrandHandler({ db: args.db }));
-  registerHandler(
-    "recompute-cohort-summary",
-    makeRecomputeCohortSummaryHandler({ db: args.db, queue: args.queue })
-  );
+  registerHandler("recompute-cohort-summary", makeRecomputeCohortSummaryHandler({ db: args.db, queue: args.queue }));
 }
 ```
 
@@ -5926,6 +5310,7 @@ git add src/domain/scoring/snapshot.ts src/jobs/score-brand.ts src/jobs/recomput
 git commit -m "feat: snapshot promotion + score-brand + cohort-recompute jobs"
 ```
 
+
 ---
 
 ## Group G — Public API
@@ -5933,7 +5318,6 @@ git commit -m "feat: snapshot promotion + score-brand + cohort-recompute jobs"
 ### Task 30: HTTP infrastructure (bearer auth, ETag/caching, problem details)
 
 **Files:**
-
 - Create: `src/infrastructure/http/auth-bearer.ts`, `src/infrastructure/http/caching.ts`, `src/infrastructure/http/problem-details.ts`, `src/infrastructure/http/index.ts`
 - Test: `tests/unit/http-caching.test.ts`, `tests/integration/http-bearer.test.ts`
 
@@ -5947,11 +5331,7 @@ export function computeEtag(body: string | Uint8Array): string {
   return `"${createHash("sha256").update(data).digest("hex").slice(0, 16)}"`;
 }
 
-export function cacheHeaders(
-  maxAgeSeconds: number,
-  etag: string,
-  lastModified?: Date
-): Record<string, string> {
+export function cacheHeaders(maxAgeSeconds: number, etag: string, lastModified?: Date): Record<string, string> {
   const h: Record<string, string> = {
     "cache-control": `public, max-age=${maxAgeSeconds}`,
     etag,
@@ -5962,13 +5342,7 @@ export function cacheHeaders(
 
 export function notModified(reqEtag: string | null, etag: string): boolean {
   if (!reqEtag) return false;
-  return (
-    reqEtag === etag ||
-    reqEtag
-      .split(",")
-      .map((s) => s.trim())
-      .includes(etag)
-  );
+  return reqEtag === etag || reqEtag.split(",").map((s) => s.trim()).includes(etag);
 }
 ```
 
@@ -6086,20 +5460,16 @@ describe("bearerAuth", () => {
   });
 
   test("accepts valid bearer", async () => {
-    const r = await app.handle(
-      new Request("http://localhost/api/v1/brands", {
-        headers: { authorization: "Bearer expected" },
-      })
-    );
+    const r = await app.handle(new Request("http://localhost/api/v1/brands", {
+      headers: { authorization: "Bearer expected" },
+    }));
     expect(r.status).toBe(200);
   });
 
   test("rejects wrong bearer", async () => {
-    const r = await app.handle(
-      new Request("http://localhost/api/v1/brands", {
-        headers: { authorization: "Bearer wrong" },
-      })
-    );
+    const r = await app.handle(new Request("http://localhost/api/v1/brands", {
+      headers: { authorization: "Bearer wrong" },
+    }));
     expect(r.status).toBe(401);
   });
 });
@@ -6118,7 +5488,6 @@ git commit -m "feat: HTTP infrastructure (bearer auth, caching, problem details)
 ### Task 31: Brand domain (repo + slug)
 
 **Files:**
-
 - Create: `src/domain/brands/slug.ts`, `src/domain/brands/types.ts`, `src/domain/brands/repo.ts`, `src/domain/brands/index.ts`
 - Test: `tests/unit/brand-slug.test.ts`, `tests/integration/brand-repo.test.ts`
 
@@ -6204,12 +5573,7 @@ import { eq } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { brands, brandSources } from "../../infrastructure/db/schema";
 import { brandSlugFromName, resolveSlugCollision } from "./slug";
-import {
-  NewBrandInputSchema,
-  type NewBrandInput,
-  NewBrandSourceInputSchema,
-  type NewBrandSourceInput,
-} from "./types";
+import { NewBrandInputSchema, type NewBrandInput, NewBrandSourceInputSchema, type NewBrandSourceInput } from "./types";
 
 export class BrandRepo {
   constructor(private readonly db: DB) {}
@@ -6231,19 +5595,11 @@ export class BrandRepo {
   async create(raw: unknown): Promise<{ id: number; slug: string }> {
     const input = NewBrandInputSchema.parse(raw) as NewBrandInput;
     const baseSlug = brandSlugFromName(input.name);
-    const existing = new Set(
-      (await this.db.select({ slug: brands.slug }).from(brands)).map((r) => r.slug)
-    );
+    const existing = new Set((await this.db.select({ slug: brands.slug }).from(brands)).map((r) => r.slug));
     const slug = resolveSlugCollision(baseSlug, existing);
-    const [row] = await this.db
-      .insert(brands)
-      .values({
-        slug,
-        name: input.name,
-        primaryUrl: input.primaryUrl,
-        categoryTag: input.categoryTag,
-      })
-      .returning({ id: brands.id, slug: brands.slug });
+    const [row] = await this.db.insert(brands).values({
+      slug, name: input.name, primaryUrl: input.primaryUrl, categoryTag: input.categoryTag,
+    }).returning({ id: brands.id, slug: brands.slug });
     return row!;
   }
 }
@@ -6257,14 +5613,9 @@ export class BrandSourceRepo {
 
   async create(raw: unknown): Promise<{ id: number }> {
     const input = NewBrandSourceInputSchema.parse(raw) as NewBrandSourceInput;
-    const [row] = await this.db
-      .insert(brandSources)
-      .values({
-        brandId: input.brandId,
-        url: input.url,
-        sourceType: input.sourceType,
-      })
-      .returning({ id: brandSources.id });
+    const [row] = await this.db.insert(brandSources).values({
+      brandId: input.brandId, url: input.url, sourceType: input.sourceType,
+    }).returning({ id: brandSources.id });
     return row!;
   }
 
@@ -6278,12 +5629,7 @@ export class BrandSourceRepo {
 
 ```typescript
 export { brandSlugFromName, resolveSlugCollision } from "./slug";
-export {
-  NewBrandInputSchema,
-  type NewBrandInput,
-  NewBrandSourceInputSchema,
-  type NewBrandSourceInput,
-} from "./types";
+export { NewBrandInputSchema, type NewBrandInput, NewBrandSourceInputSchema, type NewBrandSourceInput } from "./types";
 export { BrandRepo, BrandSourceRepo } from "./repo";
 ```
 
@@ -6358,7 +5704,6 @@ git commit -m "feat: brand domain (slug, types, repos)"
 ### Task 32: Public API routes (health, brands, size-chart, score-history)
 
 **Files:**
-
 - Create: `src/public-api/health.ts`, `src/public-api/brands.ts`, `src/public-api/size-charts.ts`, `src/public-api/score-history.ts`, `src/public-api/index.ts`
 - Test: `tests/integration/public-api.test.ts`
 
@@ -6372,13 +5717,8 @@ import { jobs } from "../infrastructure/db/schema";
 
 export function healthRoute(args: { db: DB; bootedAt: Date }): Elysia {
   return new Elysia().get("/api/v1/health", async () => {
-    const dbOk = await args.db
-      .execute(sql`SELECT 1 as ok`)
-      .then(() => true)
-      .catch(() => false);
-    const [count] = (await args.db.execute(
-      sql`SELECT count(*) as c FROM ${jobs} WHERE status='pending'`
-    )) as unknown as Array<{ c: number }>;
+    const dbOk = await args.db.execute(sql`SELECT 1 as ok`).then(() => true).catch(() => false);
+    const [count] = (await args.db.execute(sql`SELECT count(*) as c FROM ${jobs} WHERE status='pending'`)) as unknown as Array<{ c: number }>;
     return {
       ok: dbOk,
       db: dbOk,
@@ -6396,13 +5736,7 @@ import { Elysia } from "elysia";
 import { eq } from "drizzle-orm";
 import type { DB } from "../infrastructure/db";
 import { brands, brandSizeChartVersions, brandScoreHistory } from "../infrastructure/db/schema";
-import {
-  cacheHeaders,
-  computeEtag,
-  notModified,
-  problemDetailsResponse,
-  ProblemTypes,
-} from "../infrastructure/http";
+import { cacheHeaders, computeEtag, notModified, problemDetailsResponse, ProblemTypes } from "../infrastructure/http";
 
 export function brandsRoute(args: { db: DB }): Elysia {
   return new Elysia()
@@ -6435,25 +5769,15 @@ export function brandsRoute(args: { db: DB }): Elysia {
       });
     })
     .get("/api/v1/brands/:slug", async ({ params, request }) => {
-      const [brand] = await args.db
-        .select()
-        .from(brands)
-        .where(eq(brands.slug, params.slug))
-        .limit(1);
+      const [brand] = await args.db.select().from(brands).where(eq(brands.slug, params.slug)).limit(1);
       if (!brand) {
         return problemDetailsResponse({
-          type: ProblemTypes.NotFound,
-          title: "Not Found",
-          status: 404,
+          type: ProblemTypes.NotFound, title: "Not Found", status: 404,
           detail: `No brand with slug ${params.slug}`,
         });
       }
       const [chart] = brand.currentSizeChartVersionId
-        ? await args.db
-            .select()
-            .from(brandSizeChartVersions)
-            .where(eq(brandSizeChartVersions.id, brand.currentSizeChartVersionId))
-            .limit(1)
+        ? await args.db.select().from(brandSizeChartVersions).where(eq(brandSizeChartVersions.id, brand.currentSizeChartVersionId)).limit(1)
         : [];
       const body = JSON.stringify({
         slug: brand.slug,
@@ -6484,26 +5808,14 @@ import { Elysia } from "elysia";
 import { eq } from "drizzle-orm";
 import type { DB } from "../infrastructure/db";
 import { brands, brandSizeChartVersions } from "../infrastructure/db/schema";
-import {
-  cacheHeaders,
-  computeEtag,
-  notModified,
-  problemDetailsResponse,
-  ProblemTypes,
-} from "../infrastructure/http";
+import { cacheHeaders, computeEtag, notModified, problemDetailsResponse, ProblemTypes } from "../infrastructure/http";
 
 export function sizeChartsRoute(args: { db: DB }): Elysia {
   return new Elysia().get("/api/v1/brands/:slug/size-chart", async ({ params, request }) => {
-    const [brand] = await args.db
-      .select()
-      .from(brands)
-      .where(eq(brands.slug, params.slug))
-      .limit(1);
+    const [brand] = await args.db.select().from(brands).where(eq(brands.slug, params.slug)).limit(1);
     if (!brand?.currentSizeChartVersionId) {
       return problemDetailsResponse({
-        type: ProblemTypes.NotFound,
-        title: "Not Found",
-        status: 404,
+        type: ProblemTypes.NotFound, title: "Not Found", status: 404,
         detail: `No accepted size chart for ${params.slug}`,
       });
     }
@@ -6514,9 +5826,7 @@ export function sizeChartsRoute(args: { db: DB }): Elysia {
       .limit(1);
     if (!v) {
       return problemDetailsResponse({
-        type: ProblemTypes.NotFound,
-        title: "Not Found",
-        status: 404,
+        type: ProblemTypes.NotFound, title: "Not Found", status: 404,
         detail: `Inconsistent state: current version pointer dangling`,
       });
     }
@@ -6540,41 +5850,23 @@ import { Elysia } from "elysia";
 import { and, eq, gte } from "drizzle-orm";
 import type { DB } from "../infrastructure/db";
 import { brands, brandScoreSnapshots } from "../infrastructure/db/schema";
-import {
-  cacheHeaders,
-  computeEtag,
-  notModified,
-  problemDetailsResponse,
-  ProblemTypes,
-} from "../infrastructure/http";
+import { cacheHeaders, computeEtag, notModified, problemDetailsResponse, ProblemTypes } from "../infrastructure/http";
 
 export function scoreHistoryRoute(args: { db: DB }): Elysia {
   return new Elysia().get("/api/v1/brands/:slug/score-history", async ({ params, request }) => {
     const url = new URL(request.url);
     const since = url.searchParams.get("since");
-    const [brand] = await args.db
-      .select()
-      .from(brands)
-      .where(eq(brands.slug, params.slug))
-      .limit(1);
+    const [brand] = await args.db.select().from(brands).where(eq(brands.slug, params.slug)).limit(1);
     if (!brand) {
       return problemDetailsResponse({
-        type: ProblemTypes.NotFound,
-        title: "Not Found",
-        status: 404,
+        type: ProblemTypes.NotFound, title: "Not Found", status: 404,
         detail: `No brand with slug ${params.slug}`,
       });
     }
-    const conditions = [
-      eq(brandScoreSnapshots.brandId, brand.id),
-      eq(brandScoreSnapshots.isPublic, true),
-    ];
+    const conditions = [eq(brandScoreSnapshots.brandId, brand.id), eq(brandScoreSnapshots.isPublic, true)];
     if (since) conditions.push(gte(brandScoreSnapshots.snapshotAt, since));
     const rows = await args.db
-      .select({
-        snapshotAt: brandScoreSnapshots.snapshotAt,
-        scoresJson: brandScoreSnapshots.scoresJson,
-      })
+      .select({ snapshotAt: brandScoreSnapshots.snapshotAt, scoresJson: brandScoreSnapshots.scoresJson })
       .from(brandScoreSnapshots)
       .where(and(...conditions))
       .orderBy(brandScoreSnapshots.snapshotAt);
@@ -6625,11 +5917,7 @@ import { describe, test, expect, beforeEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../../src/infrastructure/db/schema";
-import {
-  brands,
-  brandSizeChartVersions,
-  brandScoreSnapshots,
-} from "../../src/infrastructure/db/schema";
+import { brands, brandSizeChartVersions, brandScoreSnapshots } from "../../src/infrastructure/db/schema";
 import { publicApi } from "../../src/public-api";
 
 function makeDb() {
@@ -6692,62 +5980,32 @@ describe("public-api routes", () => {
 
   test("/brands/:slug/size-chart returns 404 when none accepted", async () => {
     await db.insert(brands).values({ slug: "a", name: "A", primaryUrl: "https://a.com" });
-    const r = await app.handle(
-      new Request("http://localhost/api/v1/brands/a/size-chart", { headers })
-    );
+    const r = await app.handle(new Request("http://localhost/api/v1/brands/a/size-chart", { headers }));
     expect(r.status).toBe(404);
   });
 
   test("/brands/:slug/size-chart returns accepted chart", async () => {
-    const [b] = await db
-      .insert(brands)
-      .values({ slug: "a", name: "A", primaryUrl: "https://a.com" })
-      .returning();
+    const [b] = await db.insert(brands).values({ slug: "a", name: "A", primaryUrl: "https://a.com" }).returning();
     const chart = { size_labels: ["S"], measurements: { S: {} } };
-    const [v] = await db
-      .insert(brandSizeChartVersions)
-      .values({
-        brandId: b!.id,
-        brandSourceId: 1,
-        sizeChartJson: chart,
-        confidenceScore: 0.9,
-        confidenceBreakdownJson: { claudeReported: 1, structuralValidation: 1, cohortOutlier: 1 },
-        status: "accepted",
-      })
-      .returning();
+    const [v] = await db.insert(brandSizeChartVersions).values({
+      brandId: b!.id, brandSourceId: 1, sizeChartJson: chart, confidenceScore: 0.9,
+      confidenceBreakdownJson: { claudeReported: 1, structuralValidation: 1, cohortOutlier: 1 },
+      status: "accepted",
+    }).returning();
     await db.update(brands).set({ currentSizeChartVersionId: v!.id });
-    const r = await app.handle(
-      new Request("http://localhost/api/v1/brands/a/size-chart", { headers })
-    );
+    const r = await app.handle(new Request("http://localhost/api/v1/brands/a/size-chart", { headers }));
     expect(r.status).toBe(200);
     const json = await r.json();
     expect(json.size_labels).toEqual(["S"]);
   });
 
   test("/brands/:slug/score-history filters by is_public", async () => {
-    const [b] = await db
-      .insert(brands)
-      .values({ slug: "a", name: "A", primaryUrl: "https://a.com" })
-      .returning();
+    const [b] = await db.insert(brands).values({ slug: "a", name: "A", primaryUrl: "https://a.com" }).returning();
     await db.insert(brandScoreSnapshots).values([
-      {
-        brandId: b!.id,
-        promotedFromHistoryId: 1,
-        cohortSummaryId: 1,
-        scoresJson: { composite: 7 },
-        isPublic: true,
-      },
-      {
-        brandId: b!.id,
-        promotedFromHistoryId: 2,
-        cohortSummaryId: 1,
-        scoresJson: { composite: 8 },
-        isPublic: false,
-      },
+      { brandId: b!.id, promotedFromHistoryId: 1, cohortSummaryId: 1, scoresJson: { composite: 7 }, isPublic: true },
+      { brandId: b!.id, promotedFromHistoryId: 2, cohortSummaryId: 1, scoresJson: { composite: 8 }, isPublic: false },
     ]);
-    const r = await app.handle(
-      new Request("http://localhost/api/v1/brands/a/score-history", { headers })
-    );
+    const r = await app.handle(new Request("http://localhost/api/v1/brands/a/score-history", { headers }));
     const json = await r.json();
     expect(json.snapshots.length).toBe(1);
   });
@@ -6757,11 +6015,7 @@ describe("public-api routes", () => {
     const r1 = await app.handle(new Request("http://localhost/api/v1/brands", { headers }));
     const etag = r1.headers.get("etag");
     expect(etag).not.toBeNull();
-    const r2 = await app.handle(
-      new Request("http://localhost/api/v1/brands", {
-        headers: { ...headers, "if-none-match": etag! },
-      })
-    );
+    const r2 = await app.handle(new Request("http://localhost/api/v1/brands", { headers: { ...headers, "if-none-match": etag! } }));
     expect(r2.status).toBe(304);
   });
 });
@@ -6775,6 +6029,7 @@ git add src/public-api/ tests/integration/public-api.test.ts
 git commit -m "feat: public API routes (health, brands, size-chart, score-history)"
 ```
 
+
 ---
 
 ## Group H — Admin UI
@@ -6784,7 +6039,6 @@ JSX (server-rendered) + HTMX + Pico.css. Single-user, single-password session. `
 ### Task 33: Admin auth (session cookies + login + middleware)
 
 **Files:**
-
 - Create: `src/infrastructure/http/auth-session.ts`, `src/admin-ui/actions/auth.ts`, `src/admin-ui/pages/login.tsx`
 - Test: `tests/integration/admin-auth.test.ts`
 
@@ -6826,10 +6080,7 @@ function verifyCookie(signed: string, secret: string): string | null {
 }
 
 export class AdminAuth {
-  constructor(
-    private readonly db: DB,
-    private readonly sessionSecret: string
-  ) {}
+  constructor(private readonly db: DB, private readonly sessionSecret: string) {}
 
   async createSession(): Promise<string> {
     const token = randomBytes(32).toString("hex");
@@ -6849,18 +6100,10 @@ export class AdminAuth {
     const [row] = await this.db
       .select()
       .from(adminSessions)
-      .where(
-        and(
-          eq(adminSessions.sessionTokenHash, hashToken(token)),
-          gt(adminSessions.expiresAt, nowIso)
-        )
-      )
+      .where(and(eq(adminSessions.sessionTokenHash, hashToken(token)), gt(adminSessions.expiresAt, nowIso)))
       .limit(1);
     if (!row) return false;
-    await this.db
-      .update(adminSessions)
-      .set({ lastSeenAt: nowIso })
-      .where(eq(adminSessions.id, row.id));
+    await this.db.update(adminSessions).set({ lastSeenAt: nowIso }).where(eq(adminSessions.id, row.id));
     return true;
   }
 
@@ -6903,10 +6146,7 @@ export function LoginPage(props: { error?: string }) {
       <head>
         <meta charset="utf-8" />
         <title>brand-scan — Login</title>
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-        />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
       </head>
       <body>
         <main class="container" style="max-width: 30em; margin-top: 5em;">
@@ -6914,9 +6154,7 @@ export function LoginPage(props: { error?: string }) {
             <h1>brand-scan</h1>
             <p>Admin login</p>
           </hgroup>
-          {props.error ? (
-            <article style="color: var(--pico-color-red-500);">{props.error}</article>
-          ) : null}
+          {props.error ? <article style="color: var(--pico-color-red-500);">{props.error}</article> : null}
           <form method="post" action="/admin/login/submit">
             <label for="password">Password</label>
             <input type="password" name="password" id="password" required autofocus />
@@ -6945,13 +6183,7 @@ export interface AuthActionsArgs {
 export function authActions(args: AuthActionsArgs): Elysia {
   return new Elysia()
     .use(cookie())
-    .get(
-      "/admin/login",
-      () =>
-        new Response(`<!DOCTYPE html>${LoginPage({})}`, {
-          headers: { "content-type": "text/html" },
-        })
-    )
+    .get("/admin/login", () => new Response(`<!DOCTYPE html>${LoginPage({})}`, { headers: { "content-type": "text/html" } }))
     .post("/admin/login/submit", async ({ request, set, setCookie }) => {
       const form = await request.formData();
       const password = String(form.get("password") ?? "");
@@ -6964,11 +6196,7 @@ export function authActions(args: AuthActionsArgs): Elysia {
       }
       const cookieValue = await args.auth.createSession();
       setCookie(AdminAuth.cookieName(), cookieValue, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: true,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: 60 * 60 * 24 * 30,
       });
       set.status = 302;
       set.headers.location = "/admin";
@@ -7036,15 +6264,11 @@ describe("admin auth", () => {
   test("login + GET /admin succeeds with session cookie", async () => {
     const form = new FormData();
     form.set("password", "password123");
-    const loginResp = await app.handle(
-      new Request("http://localhost/admin/login/submit", { method: "POST", body: form })
-    );
+    const loginResp = await app.handle(new Request("http://localhost/admin/login/submit", { method: "POST", body: form }));
     expect(loginResp.status).toBe(302);
     const setCookie = loginResp.headers.get("set-cookie")!;
     const cookieVal = setCookie.split(";")[0]!;
-    const r = await app.handle(
-      new Request("http://localhost/admin", { headers: { cookie: cookieVal } })
-    );
+    const r = await app.handle(new Request("http://localhost/admin", { headers: { cookie: cookieVal } }));
     expect(r.status).toBe(200);
     expect(await r.text()).toBe("OK");
   });
@@ -7052,9 +6276,7 @@ describe("admin auth", () => {
   test("invalid password returns 401 with login page", async () => {
     const form = new FormData();
     form.set("password", "wrong");
-    const r = await app.handle(
-      new Request("http://localhost/admin/login/submit", { method: "POST", body: form })
-    );
+    const r = await app.handle(new Request("http://localhost/admin/login/submit", { method: "POST", body: form }));
     expect(r.status).toBe(401);
     expect(await r.text()).toContain("Invalid password");
   });
@@ -7065,7 +6287,7 @@ describe("admin auth", () => {
 
 ```bash
 bun test tests/integration/admin-auth.test.ts
-git add src/infrastructure/http/auth-session.ts src/admin-ui/ tests/integration/admin-auth.test.ts package.json bun.lockb
+git add src/infrastructure/http/auth-session.ts src/admin-ui/ tests/integration/admin-auth.test.ts package.json bun.lock
 git commit -m "feat: admin auth (session cookies, login, middleware)"
 ```
 
@@ -7074,7 +6296,6 @@ git commit -m "feat: admin auth (session cookies, login, middleware)"
 ### Task 34: Admin layout + nav + base components
 
 **Files:**
-
 - Create: `src/admin-ui/layout.tsx`, `src/admin-ui/components/nav.tsx`, `src/admin-ui/components/card.tsx`, `src/admin-ui/components/table.tsx`, `src/admin-ui/components/form.tsx`
 
 - [ ] **Step 1: Write src/admin-ui/components/nav.tsx**
@@ -7093,23 +6314,17 @@ export function Nav(props: { current: string }) {
   return (
     <nav class="container-fluid">
       <ul>
-        <li>
-          <strong>brand-scan</strong>
-        </li>
+        <li><strong>brand-scan</strong></li>
       </ul>
       <ul>
         {items.map(([href, label]) => (
           <li>
-            <a href={href} aria-current={props.current === href ? "page" : undefined}>
-              {label}
-            </a>
+            <a href={href} aria-current={props.current === href ? "page" : undefined}>{label}</a>
           </li>
         ))}
         <li>
           <form method="post" action="/admin/logout" style="display:inline;">
-            <button type="submit" class="secondary outline">
-              Log out
-            </button>
+            <button type="submit" class="secondary outline">Log out</button>
           </form>
         </li>
       </ul>
@@ -7136,10 +6351,7 @@ export function Layout(props: LayoutProps) {
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{props.title} — brand-scan</title>
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-        />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
         <script src="https://unpkg.com/htmx.org@2"></script>
       </head>
       <body>
@@ -7161,9 +6373,7 @@ export function renderHtml(node: string): Response {
 export function Card(props: { title: string; children: string | string[] | undefined }) {
   return (
     <article>
-      <header>
-        <h3 style="margin:0;">{props.title}</h3>
-      </header>
+      <header><h3 style="margin:0;">{props.title}</h3></header>
       {props.children}
     </article>
   );
@@ -7185,20 +6395,10 @@ export function DataTable<T>(props: { columns: Column<T>[]; rows: T[]; emptyMess
   return (
     <figure>
       <table role="grid">
-        <thead>
-          <tr>
-            {props.columns.map((c) => (
-              <th>{c.header}</th>
-            ))}
-          </tr>
-        </thead>
+        <thead><tr>{props.columns.map((c) => <th>{c.header}</th>)}</tr></thead>
         <tbody>
           {props.rows.map((row) => (
-            <tr>
-              {props.columns.map((c) => (
-                <td>{c.render(row)}</td>
-              ))}
-            </tr>
+            <tr>{props.columns.map((c) => <td>{c.render(row)}</td>)}</tr>
           ))}
         </tbody>
       </table>
@@ -7210,14 +6410,7 @@ export function DataTable<T>(props: { columns: Column<T>[]; rows: T[]; emptyMess
 - [ ] **Step 5: Write src/admin-ui/components/form.tsx**
 
 ```tsx
-export function TextInput(props: {
-  name: string;
-  label: string;
-  type?: string;
-  value?: string;
-  required?: boolean;
-  autofocus?: boolean;
-}) {
+export function TextInput(props: { name: string; label: string; type?: string; value?: string; required?: boolean; autofocus?: boolean }) {
   return (
     <>
       <label for={props.name}>{props.label}</label>
@@ -7233,20 +6426,13 @@ export function TextInput(props: {
   );
 }
 
-export function Select(props: {
-  name: string;
-  label: string;
-  options: Array<[string, string]>;
-  value?: string;
-}) {
+export function Select(props: { name: string; label: string; options: Array<[string, string]>; value?: string }) {
   return (
     <>
       <label for={props.name}>{props.label}</label>
       <select name={props.name} id={props.name}>
         {props.options.map(([v, l]) => (
-          <option value={v} selected={props.value === v}>
-            {l}
-          </option>
+          <option value={v} selected={props.value === v}>{l}</option>
         ))}
       </select>
     </>
@@ -7266,7 +6452,6 @@ git commit -m "feat: admin layout + nav + base components"
 ### Task 35: Dashboard page
 
 **Files:**
-
 - Create: `src/admin-ui/pages/dashboard.tsx`
 
 - [ ] **Step 1: Write src/admin-ui/pages/dashboard.tsx**
@@ -7288,14 +6473,8 @@ export interface DashboardArgs {
 export function dashboardRoute(args: DashboardArgs): Elysia {
   return new Elysia().get("/admin", async () => {
     const [{ value: brandCount }] = await args.db.select({ value: count() }).from(brands);
-    const [{ value: brandsWithChart }] = await args.db
-      .select({ value: count() })
-      .from(brands)
-      .where(isNotNull(brands.currentSizeChartVersionId));
-    const [{ value: pendingReview }] = await args.db
-      .select({ value: count() })
-      .from(brandSizeChartVersions)
-      .where(eq(brandSizeChartVersions.status, "pending_review"));
+    const [{ value: brandsWithChart }] = await args.db.select({ value: count() }).from(brands).where(isNotNull(brands.currentSizeChartVersionId));
+    const [{ value: pendingReview }] = await args.db.select({ value: count() }).from(brandSizeChartVersions).where(eq(brandSizeChartVersions.status, "pending_review"));
     const recentRuns = await args.db.select().from(runs).orderBy(runs.startedAt).limit(10);
     const firecrawl = await args.circuitBreaker.check("firecrawl");
     const anthropic = await args.circuitBreaker.check("anthropic");
@@ -7317,21 +6496,11 @@ export function dashboardRoute(args: DashboardArgs): Elysia {
         </div>
         <h2>Recent runs</h2>
         <table role="grid">
-          <thead>
-            <tr>
-              <th>Run ID</th>
-              <th>Status</th>
-              <th>Started</th>
-              <th>Finished</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Run ID</th><th>Status</th><th>Started</th><th>Finished</th></tr></thead>
           <tbody>
             {recentRuns.map((r) => (
               <tr>
-                <td>{r.id}</td>
-                <td>{r.status}</td>
-                <td>{r.startedAt}</td>
-                <td>{r.finishedAt ?? "—"}</td>
+                <td>{r.id}</td><td>{r.status}</td><td>{r.startedAt}</td><td>{r.finishedAt ?? "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -7354,7 +6523,6 @@ git commit -m "feat: admin dashboard page"
 ### Task 36: Brands list + add brand modal
 
 **Files:**
-
 - Create: `src/admin-ui/pages/brands-list.tsx`, `src/admin-ui/actions/brand.ts`
 
 - [ ] **Step 1: Write src/admin-ui/pages/brands-list.tsx**
@@ -7381,22 +6549,12 @@ export function brandsListRoute(args: { db: DB }): Elysia {
           </form>
         </details>
         <table role="grid">
-          <thead>
-            <tr>
-              <th>Slug</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Updated</th>
-              <th></th>
-            </tr>
-          </thead>
+          <thead><tr><th>Slug</th><th>Name</th><th>Category</th><th>Updated</th><th></th></tr></thead>
           <tbody>
             {rows.map((b) => (
               <tr>
                 <td>{b.slug}</td>
-                <td>
-                  <a href={`/admin/brands/${b.slug}`}>{b.name}</a>
-                </td>
+                <td><a href={`/admin/brands/${b.slug}`}>{b.name}</a></td>
                 <td>{b.categoryTag}</td>
                 <td>{b.updatedAt}</td>
                 <td>{b.active ? "active" : "inactive"}</td>
@@ -7444,7 +6602,6 @@ git commit -m "feat: brands list page + add-brand action"
 ### Task 37: Brand detail tabs (overview, sources, size-chart, score-history, runs)
 
 **Files:**
-
 - Create: `src/admin-ui/pages/brand-detail.tsx`, `src/admin-ui/pages/brand-tabs/overview.tsx`, `src/admin-ui/pages/brand-tabs/sources.tsx`, `src/admin-ui/pages/brand-tabs/size-chart.tsx`, `src/admin-ui/pages/brand-tabs/score-history.tsx`, `src/admin-ui/pages/brand-tabs/runs.tsx`, `src/admin-ui/actions/source.ts`
 
 - [ ] **Step 1: Write src/admin-ui/pages/brand-detail.tsx**
@@ -7465,57 +6622,42 @@ const TABS = ["overview", "sources", "size-chart", "score-history", "runs"] as c
 type Tab = (typeof TABS)[number];
 
 export function brandDetailRoute(args: { db: DB }): Elysia {
-  return new Elysia().get("/admin/brands/:slug", async ({ params, request }) => {
-    const url = new URL(request.url);
-    const tab = (url.searchParams.get("tab") ?? "overview") as Tab;
-    const [brand] = await args.db
-      .select()
-      .from(brands)
-      .where(eq(brands.slug, params.slug))
-      .limit(1);
-    if (!brand) return new Response("Not found", { status: 404 });
+  return new Elysia()
+    .get("/admin/brands/:slug", async ({ params, request }) => {
+      const url = new URL(request.url);
+      const tab = (url.searchParams.get("tab") ?? "overview") as Tab;
+      const [brand] = await args.db.select().from(brands).where(eq(brands.slug, params.slug)).limit(1);
+      if (!brand) return new Response("Not found", { status: 404 });
 
-    const tabContent = await renderTab(args.db, brand.id, tab);
-    return renderHtml(
-      <Layout title={brand.name} currentPath="/admin/brands">
-        <hgroup>
-          <h1>{brand.name}</h1>
-          <p>
-            <a href={brand.primaryUrl}>{brand.primaryUrl}</a> · {brand.categoryTag}
-          </p>
-        </hgroup>
-        <nav>
-          <ul>
-            {TABS.map((t) => (
-              <li>
-                <a
-                  href={`/admin/brands/${params.slug}?tab=${t}`}
-                  aria-current={tab === t ? "page" : undefined}
-                >
-                  {t}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <section>{tabContent}</section>
-      </Layout>
-    );
-  });
+      const tabContent = await renderTab(args.db, brand.id, tab);
+      return renderHtml(
+        <Layout title={brand.name} currentPath="/admin/brands">
+          <hgroup>
+            <h1>{brand.name}</h1>
+            <p><a href={brand.primaryUrl}>{brand.primaryUrl}</a> · {brand.categoryTag}</p>
+          </hgroup>
+          <nav>
+            <ul>
+              {TABS.map((t) => (
+                <li>
+                  <a href={`/admin/brands/${params.slug}?tab=${t}`} aria-current={tab === t ? "page" : undefined}>{t}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <section>{tabContent}</section>
+        </Layout>
+      );
+    });
 }
 
 async function renderTab(db: DB, brandId: number, tab: Tab): Promise<string> {
   switch (tab) {
-    case "overview":
-      return OverviewTab({ db, brandId });
-    case "sources":
-      return SourcesTab({ db, brandId });
-    case "size-chart":
-      return SizeChartTab({ db, brandId });
-    case "score-history":
-      return ScoreHistoryTab({ db, brandId });
-    case "runs":
-      return RunsTab({ db, brandId });
+    case "overview": return OverviewTab({ db, brandId });
+    case "sources": return SourcesTab({ db, brandId });
+    case "size-chart": return SizeChartTab({ db, brandId });
+    case "score-history": return ScoreHistoryTab({ db, brandId });
+    case "runs": return RunsTab({ db, brandId });
   }
 }
 ```
@@ -7529,35 +6671,21 @@ import { brands, brandScoreHistory } from "../../../infrastructure/db/schema";
 
 export async function OverviewTab(args: { db: DB; brandId: number }): Promise<string> {
   const [brand] = await args.db.select().from(brands).where(eq(brands.id, args.brandId)).limit(1);
-  const [latest] = await args.db
-    .select()
-    .from(brandScoreHistory)
-    .where(eq(brandScoreHistory.brandId, args.brandId))
-    .orderBy(desc(brandScoreHistory.computedAt))
-    .limit(1);
+  const [latest] = await args.db.select().from(brandScoreHistory).where(eq(brandScoreHistory.brandId, args.brandId)).orderBy(desc(brandScoreHistory.computedAt)).limit(1);
   const scores = latest?.scoresJson as Record<string, number | null> | undefined;
   return (
     <div>
       <h3>Current scores</h3>
-      {!scores ? (
-        <p>No scores computed yet.</p>
-      ) : (
+      {!scores ? <p>No scores computed yet.</p> : (
         <table>
           <tbody>
             {Object.entries(scores).map(([k, v]) => (
-              <tr>
-                <th>{k}</th>
-                <td>{v === null ? "—" : v.toFixed(2)}</td>
-              </tr>
+              <tr><th>{k}</th><td>{v === null ? "—" : v.toFixed(2)}</td></tr>
             ))}
           </tbody>
         </table>
       )}
-      <p>
-        {brand?.divergenceFlag
-          ? "Divergence flag set: computed scores diverge from author assessments."
-          : ""}
-      </p>
+      <p>{brand?.divergenceFlag ? "Divergence flag set: computed scores diverge from author assessments." : ""}</p>
     </div>
   );
 }
@@ -7571,10 +6699,7 @@ import type { DB } from "../../../infrastructure/db";
 import { brandSources } from "../../../infrastructure/db/schema";
 
 export async function SourcesTab(args: { db: DB; brandId: number }): Promise<string> {
-  const rows = await args.db
-    .select()
-    .from(brandSources)
-    .where(eq(brandSources.brandId, args.brandId));
+  const rows = await args.db.select().from(brandSources).where(eq(brandSources.brandId, args.brandId));
   return (
     <div>
       <h3>Sources</h3>
@@ -7591,37 +6716,18 @@ export async function SourcesTab(args: { db: DB; brandId: number }): Promise<str
         </fieldset>
       </form>
       <table role="grid">
-        <thead>
-          <tr>
-            <th>URL</th>
-            <th>Type</th>
-            <th>Last fetched</th>
-            <th></th>
-          </tr>
-        </thead>
+        <thead><tr><th>URL</th><th>Type</th><th>Last fetched</th><th></th></tr></thead>
         <tbody>
           {rows.map((s) => (
             <tr>
-              <td>
-                <code>{s.url}</code>
-              </td>
+              <td><code>{s.url}</code></td>
               <td>{s.sourceType}</td>
               <td>{s.lastFetchedAt ?? "—"}</td>
               <td>
-                <form
-                  method="post"
-                  action={`/admin/brand-sources/${s.id}/delete`}
-                  style="display:inline"
-                >
-                  <button type="submit" class="secondary outline">
-                    Delete
-                  </button>
+                <form method="post" action={`/admin/brand-sources/${s.id}/delete`} style="display:inline">
+                  <button type="submit" class="secondary outline">Delete</button>
                 </form>
-                <form
-                  method="post"
-                  action={`/admin/brand-sources/${s.id}/extract-now`}
-                  style="display:inline"
-                >
+                <form method="post" action={`/admin/brand-sources/${s.id}/extract-now`} style="display:inline">
                   <button type="submit">Extract now</button>
                 </form>
               </td>
@@ -7644,32 +6750,15 @@ import { brands, brandSizeChartVersions } from "../../../infrastructure/db/schem
 export async function SizeChartTab(args: { db: DB; brandId: number }): Promise<string> {
   const [brand] = await args.db.select().from(brands).where(eq(brands.id, args.brandId)).limit(1);
   if (!brand?.currentSizeChartVersionId) return <p>No accepted size chart yet.</p>;
-  const [current] = await args.db
-    .select()
-    .from(brandSizeChartVersions)
-    .where(eq(brandSizeChartVersions.id, brand.currentSizeChartVersionId))
-    .limit(1);
-  const history = await args.db
-    .select()
-    .from(brandSizeChartVersions)
-    .where(eq(brandSizeChartVersions.brandId, args.brandId))
-    .orderBy(desc(brandSizeChartVersions.extractedAt))
-    .limit(20);
+  const [current] = await args.db.select().from(brandSizeChartVersions).where(eq(brandSizeChartVersions.id, brand.currentSizeChartVersionId)).limit(1);
+  const history = await args.db.select().from(brandSizeChartVersions).where(eq(brandSizeChartVersions.brandId, args.brandId)).orderBy(desc(brandSizeChartVersions.extractedAt)).limit(20);
   return (
     <div>
       <h3>Current size chart</h3>
-      <pre>
-        <code>{JSON.stringify(current?.sizeChartJson, null, 2)}</code>
-      </pre>
+      <pre><code>{JSON.stringify(current?.sizeChartJson, null, 2)}</code></pre>
       <h3>Version history</h3>
       <table role="grid">
-        <thead>
-          <tr>
-            <th>Extracted</th>
-            <th>Status</th>
-            <th>Confidence</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Extracted</th><th>Status</th><th>Confidence</th></tr></thead>
         <tbody>
           {history.map((v) => (
             <tr>
@@ -7693,22 +6782,12 @@ import type { DB } from "../../../infrastructure/db";
 import { brandScoreSnapshots } from "../../../infrastructure/db/schema";
 
 export async function ScoreHistoryTab(args: { db: DB; brandId: number }): Promise<string> {
-  const rows = await args.db
-    .select()
-    .from(brandScoreSnapshots)
-    .where(eq(brandScoreSnapshots.brandId, args.brandId))
-    .orderBy(brandScoreSnapshots.snapshotAt);
+  const rows = await args.db.select().from(brandScoreSnapshots).where(eq(brandScoreSnapshots.brandId, args.brandId)).orderBy(brandScoreSnapshots.snapshotAt);
   return (
     <div>
       <h3>Snapshots</h3>
       <table role="grid">
-        <thead>
-          <tr>
-            <th>At</th>
-            <th>Public</th>
-            <th>Composite</th>
-          </tr>
-        </thead>
+        <thead><tr><th>At</th><th>Public</th><th>Composite</th></tr></thead>
         <tbody>
           {rows.map((s) => {
             const composite = (s.scoresJson as { composite?: number }).composite;
@@ -7738,13 +6817,7 @@ export async function RunsTab(args: { db: DB; brandId: number }): Promise<string
   // Phase 1: runs are keyed only by job; we don't have a denormalized brand link.
   // For now, show recent runs globally; brand-scoped runs come with a future schema tweak.
   const rows = await args.db
-    .select({
-      id: runs.id,
-      startedAt: runs.startedAt,
-      finishedAt: runs.finishedAt,
-      status: runs.status,
-      jobType: jobs.jobType,
-    })
+    .select({ id: runs.id, startedAt: runs.startedAt, finishedAt: runs.finishedAt, status: runs.status, jobType: jobs.jobType })
     .from(runs)
     .innerJoin(jobs, eq(runs.jobId, jobs.id))
     .orderBy(desc(runs.startedAt))
@@ -7753,24 +6826,10 @@ export async function RunsTab(args: { db: DB; brandId: number }): Promise<string
     <div>
       <h3>Recent runs (global; brand-scoped view coming with phase 2)</h3>
       <table role="grid">
-        <thead>
-          <tr>
-            <th>Run</th>
-            <th>Type</th>
-            <th>Status</th>
-            <th>Started</th>
-            <th>Finished</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Run</th><th>Type</th><th>Status</th><th>Started</th><th>Finished</th></tr></thead>
         <tbody>
           {rows.map((r) => (
-            <tr>
-              <td>{r.id}</td>
-              <td>{r.jobType}</td>
-              <td>{r.status}</td>
-              <td>{r.startedAt}</td>
-              <td>{r.finishedAt ?? "—"}</td>
-            </tr>
+            <tr><td>{r.id}</td><td>{r.jobType}</td><td>{r.status}</td><td>{r.startedAt}</td><td>{r.finishedAt ?? "—"}</td></tr>
           ))}
         </tbody>
       </table>
@@ -7833,7 +6892,6 @@ git commit -m "feat: brand detail page with tabbed sections + source actions"
 ### Task 38: Pending review queue (full editorial workflow)
 
 **Files:**
-
 - Create: `src/admin-ui/pages/queue.tsx`, `src/admin-ui/actions/queue.ts`
 - Test: `tests/integration/admin-queue.test.ts`
 
@@ -7877,103 +6935,42 @@ export function queueRoute(args: { db: DB; artifactsPublicBaseUrl: string }): El
         </hgroup>
         <nav>
           <ul>
-            <li>
-              <a
-                href="/admin/queue?filter=all"
-                aria-current={filter === "all" ? "page" : undefined}
-              >
-                All
-              </a>
-            </li>
-            <li>
-              <a
-                href="/admin/queue?filter=low_confidence"
-                aria-current={filter === "low_confidence" ? "page" : undefined}
-              >
-                Low confidence
-              </a>
-            </li>
-            <li>
-              <a
-                href="/admin/queue?filter=large_delta"
-                aria-current={filter === "large_delta" ? "page" : undefined}
-              >
-                Large delta
-              </a>
-            </li>
+            <li><a href="/admin/queue?filter=all" aria-current={filter === "all" ? "page" : undefined}>All</a></li>
+            <li><a href="/admin/queue?filter=low_confidence" aria-current={filter === "low_confidence" ? "page" : undefined}>Low confidence</a></li>
+            <li><a href="/admin/queue?filter=large_delta" aria-current={filter === "large_delta" ? "page" : undefined}>Large delta</a></li>
           </ul>
         </nav>
-        {first ? (
-          await renderQueueItem(args.db, args.artifactsPublicBaseUrl, first)
-        ) : (
-          <p>Queue is empty. 🎉</p>
-        )}
+        {first ? await renderQueueItem(args.db, args.artifactsPublicBaseUrl, first) : <p>Queue is empty. 🎉</p>}
       </Layout>
     );
   });
 }
 
-async function renderQueueItem(
-  db: DB,
-  artifactsBaseUrl: string,
-  item: { v: typeof brandSizeChartVersions.$inferSelect; brand: typeof brands.$inferSelect }
-): Promise<string> {
+async function renderQueueItem(db: DB, artifactsBaseUrl: string, item: { v: typeof brandSizeChartVersions.$inferSelect; brand: typeof brands.$inferSelect }): Promise<string> {
   const [artifact] = item.v.sourceRunId
-    ? await db
-        .select()
-        .from(runArtifacts)
-        .where(and(eq(runArtifacts.runId, item.v.sourceRunId), eq(runArtifacts.kind, "screenshot")))
-        .limit(1)
+    ? await db.select().from(runArtifacts).where(and(eq(runArtifacts.runId, item.v.sourceRunId), eq(runArtifacts.kind, "screenshot"))).limit(1)
     : [];
   return (
     <div id="queue-item" class="grid">
       <article>
-        <header>
-          <h3>{item.brand.name}</h3>
-          <p>
-            {item.brand.slug} · confidence {item.v.confidenceScore.toFixed(2)}
-          </p>
-        </header>
-        {artifact ? (
-          <img
-            src={`${artifactsBaseUrl}/${artifact.filePath}`}
-            alt="page screenshot"
-            style="max-width:100%;border:1px solid var(--pico-muted-border-color);"
-          />
-        ) : (
-          <p>(no screenshot)</p>
-        )}
+        <header><h3>{item.brand.name}</h3><p>{item.brand.slug} · confidence {item.v.confidenceScore.toFixed(2)}</p></header>
+        {artifact ? <img src={`${artifactsBaseUrl}/${artifact.filePath}`} alt="page screenshot" style="max-width:100%;border:1px solid var(--pico-muted-border-color);" /> : <p>(no screenshot)</p>}
       </article>
       <article>
         <form method="post" action={`/admin/queue/${item.v.id}/approve`}>
           <label for="size_chart_json">Extracted JSON (editable):</label>
-          <textarea
-            name="size_chart_json"
-            id="size_chart_json"
-            rows="20"
-            style="font-family:monospace;font-size:0.85em;"
-          >
-            {JSON.stringify(item.v.sizeChartJson, null, 2)}
-          </textarea>
+          <textarea name="size_chart_json" id="size_chart_json" rows="20" style="font-family:monospace;font-size:0.85em;">{JSON.stringify(item.v.sizeChartJson, null, 2)}</textarea>
           <fieldset role="group">
-            <button type="submit" name="action" value="approve">
-              Approve
-            </button>
-            <button type="submit" name="action" value="approve_with_edits" class="secondary">
-              Approve with edits
-            </button>
+            <button type="submit" name="action" value="approve">Approve</button>
+            <button type="submit" name="action" value="approve_with_edits" class="secondary">Approve with edits</button>
           </fieldset>
         </form>
         <form method="post" action={`/admin/queue/${item.v.id}/reject`}>
           <input type="text" name="reason" placeholder="Reason for rejection (required)" required />
-          <button type="submit" class="contrast">
-            Reject
-          </button>
+          <button type="submit" class="contrast">Reject</button>
         </form>
         <form method="post" action={`/admin/queue/${item.v.id}/reprocess`}>
-          <button type="submit" class="secondary outline">
-            Reprocess (reuse stored Firecrawl output)
-          </button>
+          <button type="submit" class="secondary outline">Reprocess (reuse stored Firecrawl output)</button>
         </form>
       </article>
     </div>
@@ -7997,42 +6994,24 @@ export function queueActions(args: { db: DB; authorSlug: string }): Elysia {
       const editedJson = form.get("size_chart_json");
       const newChart = editedJson ? JSON.parse(String(editedJson)) : null;
 
-      const [version] = await args.db
-        .select()
-        .from(brandSizeChartVersions)
-        .where(eq(brandSizeChartVersions.id, id))
-        .limit(1);
-      if (!version) {
-        set.status = 404;
-        return "";
-      }
+      const [version] = await args.db.select().from(brandSizeChartVersions).where(eq(brandSizeChartVersions.id, id)).limit(1);
+      if (!version) { set.status = 404; return ""; }
 
       // Supersede prior accepted for this brand
       await args.db
         .update(brandSizeChartVersions)
         .set({ status: "superseded" })
-        .where(
-          and(
-            eq(brandSizeChartVersions.brandId, version.brandId),
-            eq(brandSizeChartVersions.status, "accepted")
-          )
-        );
+        .where(and(eq(brandSizeChartVersions.brandId, version.brandId), eq(brandSizeChartVersions.status, "accepted")));
 
       // Mark this one accepted, with optional edits
-      await args.db
-        .update(brandSizeChartVersions)
-        .set({
-          status: "accepted",
-          sizeChartJson: newChart ?? version.sizeChartJson,
-          acceptedAt: new Date().toISOString(),
-          acceptedBy: `human:${args.authorSlug}`,
-        })
-        .where(eq(brandSizeChartVersions.id, id));
+      await args.db.update(brandSizeChartVersions).set({
+        status: "accepted",
+        sizeChartJson: newChart ?? version.sizeChartJson,
+        acceptedAt: new Date().toISOString(),
+        acceptedBy: `human:${args.authorSlug}`,
+      }).where(eq(brandSizeChartVersions.id, id));
 
-      await args.db
-        .update(brands)
-        .set({ currentSizeChartVersionId: id })
-        .where(eq(brands.id, version.brandId));
+      await args.db.update(brands).set({ currentSizeChartVersionId: id }).where(eq(brands.id, version.brandId));
 
       set.status = 302;
       set.headers.location = "/admin/queue";
@@ -8041,32 +7020,18 @@ export function queueActions(args: { db: DB; authorSlug: string }): Elysia {
     .post("/admin/queue/:id/reject", async ({ params, request, set }) => {
       const form = await request.formData();
       const reason = String(form.get("reason") ?? "").trim();
-      if (!reason) {
-        set.status = 400;
-        return "Reason required";
-      }
-      await args.db
-        .update(brandSizeChartVersions)
-        .set({
-          status: "rejected",
-          rejectionReason: reason,
-        })
-        .where(eq(brandSizeChartVersions.id, Number(params.id)));
+      if (!reason) { set.status = 400; return "Reason required"; }
+      await args.db.update(brandSizeChartVersions).set({
+        status: "rejected", rejectionReason: reason,
+      }).where(eq(brandSizeChartVersions.id, Number(params.id)));
       set.status = 302;
       set.headers.location = "/admin/queue";
       return "";
     })
     .post("/admin/queue/:id/reprocess", async ({ params, set }) => {
       // Phase 1: just mark for re-extraction; full reprocess-from-stored-artifacts is a later add.
-      const [v] = await args.db
-        .select()
-        .from(brandSizeChartVersions)
-        .where(eq(brandSizeChartVersions.id, Number(params.id)))
-        .limit(1);
-      if (!v) {
-        set.status = 404;
-        return "";
-      }
+      const [v] = await args.db.select().from(brandSizeChartVersions).where(eq(brandSizeChartVersions.id, Number(params.id))).limit(1);
+      if (!v) { set.status = 404; return ""; }
       set.status = 302;
       set.headers.location = "/admin/queue";
       return "";
@@ -8115,44 +7080,24 @@ describe("queueActions", () => {
   });
 
   test("approve marks accepted and supersedes prior", async () => {
-    const [b] = await db
-      .insert(brands)
-      .values({ slug: "x", name: "X", primaryUrl: "https://x.com" })
-      .returning();
+    const [b] = await db.insert(brands).values({ slug: "x", name: "X", primaryUrl: "https://x.com" }).returning();
     await db.insert(brandSizeChartVersions).values({
-      brandId: b!.id,
-      brandSourceId: 1,
-      sizeChartJson: { v: 1 },
-      confidenceScore: 1,
+      brandId: b!.id, brandSourceId: 1, sizeChartJson: { v: 1 }, confidenceScore: 1,
       confidenceBreakdownJson: { claudeReported: 1, structuralValidation: 1, cohortOutlier: 1 },
       status: "accepted",
     });
-    const [pending] = await db
-      .insert(brandSizeChartVersions)
-      .values({
-        brandId: b!.id,
-        brandSourceId: 1,
-        sizeChartJson: { v: 2 },
-        confidenceScore: 0.7,
-        confidenceBreakdownJson: { claudeReported: 0.7, structuralValidation: 1, cohortOutlier: 1 },
-        status: "pending_review",
-      })
-      .returning();
+    const [pending] = await db.insert(brandSizeChartVersions).values({
+      brandId: b!.id, brandSourceId: 1, sizeChartJson: { v: 2 }, confidenceScore: 0.7,
+      confidenceBreakdownJson: { claudeReported: 0.7, structuralValidation: 1, cohortOutlier: 1 },
+      status: "pending_review",
+    }).returning();
 
     const form = new FormData();
     form.set("size_chart_json", JSON.stringify({ v: 2 }));
-    const r = await app.handle(
-      new Request(`http://localhost/admin/queue/${pending!.id}/approve`, {
-        method: "POST",
-        body: form,
-      })
-    );
+    const r = await app.handle(new Request(`http://localhost/admin/queue/${pending!.id}/approve`, { method: "POST", body: form }));
     expect(r.status).toBe(302);
 
-    const versions = await db
-      .select()
-      .from(brandSizeChartVersions)
-      .orderBy(brandSizeChartVersions.id);
+    const versions = await db.select().from(brandSizeChartVersions).orderBy(brandSizeChartVersions.id);
     expect(versions[0]?.status).toBe("superseded");
     expect(versions[1]?.status).toBe("accepted");
     expect(versions[1]?.acceptedBy).toBe("human:drew");
@@ -8162,28 +7107,14 @@ describe("queueActions", () => {
   });
 
   test("reject without reason returns 400", async () => {
-    const [b] = await db
-      .insert(brands)
-      .values({ slug: "x", name: "X", primaryUrl: "https://x.com" })
-      .returning();
-    const [pending] = await db
-      .insert(brandSizeChartVersions)
-      .values({
-        brandId: b!.id,
-        brandSourceId: 1,
-        sizeChartJson: {},
-        confidenceScore: 0.3,
-        confidenceBreakdownJson: { claudeReported: 0.3, structuralValidation: 1, cohortOutlier: 1 },
-        status: "pending_review",
-      })
-      .returning();
+    const [b] = await db.insert(brands).values({ slug: "x", name: "X", primaryUrl: "https://x.com" }).returning();
+    const [pending] = await db.insert(brandSizeChartVersions).values({
+      brandId: b!.id, brandSourceId: 1, sizeChartJson: {}, confidenceScore: 0.3,
+      confidenceBreakdownJson: { claudeReported: 0.3, structuralValidation: 1, cohortOutlier: 1 },
+      status: "pending_review",
+    }).returning();
     const form = new FormData();
-    const r = await app.handle(
-      new Request(`http://localhost/admin/queue/${pending!.id}/reject`, {
-        method: "POST",
-        body: form,
-      })
-    );
+    const r = await app.handle(new Request(`http://localhost/admin/queue/${pending!.id}/reject`, { method: "POST", body: form }));
     expect(r.status).toBe(400);
   });
 });
@@ -8204,7 +7135,6 @@ git commit -m "feat: pending review queue + approve/reject/reprocess actions"
 Four lighter pages, packaged in one task.
 
 **Files:**
-
 - Create: `src/admin-ui/pages/cohort.tsx`, `src/admin-ui/pages/jobs.tsx`, `src/admin-ui/pages/usage.tsx`, `src/admin-ui/pages/settings.tsx`
 
 - [ ] **Step 1: Write src/admin-ui/pages/cohort.tsx**
@@ -8220,27 +7150,14 @@ import type { Queue } from "../../infrastructure/queue";
 export function cohortRoute(args: { db: DB; queue: Queue }): Elysia {
   return new Elysia()
     .get("/admin/cohort", async () => {
-      const [latest] = await args.db
-        .select()
-        .from(cohortSummaries)
-        .orderBy(desc(cohortSummaries.computedAt))
-        .limit(1);
+      const [latest] = await args.db.select().from(cohortSummaries).orderBy(desc(cohortSummaries.computedAt)).limit(1);
       return renderHtml(
         <Layout title="Cohort" currentPath="/admin/cohort">
           <h1>Cohort summary</h1>
-          {!latest ? (
-            <p>No cohort summary yet.</p>
-          ) : (
+          {!latest ? <p>No cohort summary yet.</p> : (
             <article>
-              <header>
-                <p>
-                  Computed {latest.computedAt} · {latest.brandCount} brands · config{" "}
-                  {latest.scoringConfigVersion}
-                </p>
-              </header>
-              <pre>
-                <code>{JSON.stringify(latest.summaryJson, null, 2)}</code>
-              </pre>
+              <header><p>Computed {latest.computedAt} · {latest.brandCount} brands · config {latest.scoringConfigVersion}</p></header>
+              <pre><code>{JSON.stringify(latest.summaryJson, null, 2)}</code></pre>
             </article>
           )}
           <form method="post" action="/admin/cohort/recompute">
@@ -8278,31 +7195,12 @@ export function jobsRoute(args: { db: DB }): Elysia {
       <Layout title="Jobs" currentPath="/admin/jobs">
         <h1>Jobs</h1>
         <table role="grid">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Attempts</th>
-              <th>Scheduled</th>
-              <th>Picked</th>
-              <th>Heartbeat</th>
-              <th>Finished</th>
-            </tr>
-          </thead>
+          <thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Attempts</th><th>Scheduled</th><th>Picked</th><th>Heartbeat</th><th>Finished</th></tr></thead>
           <tbody>
             {recent.map((j) => (
               <tr>
-                <td>{j.id}</td>
-                <td>{j.jobType}</td>
-                <td>{j.status}</td>
-                <td>
-                  {j.attempts}/{j.maxAttempts}
-                </td>
-                <td>{j.scheduledFor}</td>
-                <td>{j.pickedAt ?? "—"}</td>
-                <td>{j.heartbeatAt ?? "—"}</td>
-                <td>{j.finishedAt ?? "—"}</td>
+                <td>{j.id}</td><td>{j.jobType}</td><td>{j.status}</td><td>{j.attempts}/{j.maxAttempts}</td>
+                <td>{j.scheduledFor}</td><td>{j.pickedAt ?? "—"}</td><td>{j.heartbeatAt ?? "—"}</td><td>{j.finishedAt ?? "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -8324,9 +7222,7 @@ import { apiUsageLog } from "../../infrastructure/db/schema";
 
 export function usageRoute(args: { db: DB }): Elysia {
   return new Elysia().get("/admin/usage", async () => {
-    const monthStart = new Date();
-    monthStart.setUTCDate(1);
-    monthStart.setUTCHours(0, 0, 0, 0);
+    const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0,0,0,0);
     const rows = await args.db
       .select({
         provider: apiUsageLog.provider,
@@ -8340,21 +7236,9 @@ export function usageRoute(args: { db: DB }): Elysia {
       <Layout title="Usage" currentPath="/admin/usage">
         <h1>API usage (this month)</h1>
         <table role="grid">
-          <thead>
-            <tr>
-              <th>Provider</th>
-              <th>Units</th>
-              <th>Cost (USD)</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Provider</th><th>Units</th><th>Cost (USD)</th></tr></thead>
           <tbody>
-            {rows.map((r) => (
-              <tr>
-                <td>{r.provider}</td>
-                <td>{r.units}</td>
-                <td>${r.cost.toFixed(2)}</td>
-              </tr>
-            ))}
+            {rows.map((r) => <tr><td>{r.provider}</td><td>{r.units}</td><td>${r.cost.toFixed(2)}</td></tr>)}
           </tbody>
         </table>
       </Layout>
@@ -8371,46 +7255,27 @@ import { Elysia } from "elysia";
 import { SCORING_CONFIG_VERSION, WEIGHTS } from "../../domain/scoring";
 
 export function settingsRoute(): Elysia {
-  return new Elysia().get("/admin/settings", () =>
-    renderHtml(
-      <Layout title="Settings" currentPath="/admin/settings">
-        <h1>Settings</h1>
-        <article>
-          <header>
-            <h3>Scoring config</h3>
-          </header>
-          <p>
-            Version: <code>{SCORING_CONFIG_VERSION}</code>
-          </p>
-          <table role="grid">
-            <thead>
-              <tr>
-                <th>Dimension</th>
-                <th>Weight</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(WEIGHTS).map(([k, v]) => (
-                <tr>
-                  <td>{k}</td>
-                  <td>{v.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </article>
-        <article>
-          <header>
-            <h3>Password rotation</h3>
-          </header>
-          <p>
-            Run <code>bun run set-admin-password</code> in the deployed container, then update{" "}
-            <code>ADMIN_PASSWORD_HASH</code> in Dokploy and redeploy.
-          </p>
-        </article>
-      </Layout>
-    )
-  );
+  return new Elysia().get("/admin/settings", () => renderHtml(
+    <Layout title="Settings" currentPath="/admin/settings">
+      <h1>Settings</h1>
+      <article>
+        <header><h3>Scoring config</h3></header>
+        <p>Version: <code>{SCORING_CONFIG_VERSION}</code></p>
+        <table role="grid">
+          <thead><tr><th>Dimension</th><th>Weight</th></tr></thead>
+          <tbody>
+            {Object.entries(WEIGHTS).map(([k, v]) => (
+              <tr><td>{k}</td><td>{v.toFixed(2)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </article>
+      <article>
+        <header><h3>Password rotation</h3></header>
+        <p>Run <code>bun run set-admin-password</code> in the deployed container, then update <code>ADMIN_PASSWORD_HASH</code> in Dokploy and redeploy.</p>
+      </article>
+    </Layout>
+  ));
 }
 ```
 
@@ -8421,6 +7286,7 @@ git add src/admin-ui/pages/cohort.tsx src/admin-ui/pages/jobs.tsx src/admin-ui/p
 git commit -m "feat: cohort, jobs, usage, settings admin pages"
 ```
 
+
 ---
 
 ## Group I — Composition Root, Deployment & Quality Gates
@@ -8428,7 +7294,6 @@ git commit -m "feat: cohort, jobs, usage, settings admin pages"
 ### Task 40: Server composition root + main.ts
 
 **Files:**
-
 - Create: `src/admin-ui/index.ts`, `src/server/app.ts`, `src/main.ts` (overwrite Task 1 placeholder), `scripts/seed.ts`, `scripts/set-admin-password.ts`
 
 - [ ] **Step 1: Write src/admin-ui/index.ts**
@@ -8509,17 +7374,15 @@ export function buildApp(args: AppArgs): Elysia {
   return new Elysia()
     .use(staticPlugin({ assets: args.artifactsLocalPath, prefix: "/artifacts" }))
     .use(publicApi({ db: args.db, bearerToken: args.bearerToken, bootedAt: args.bootedAt }))
-    .use(
-      adminUi({
-        db: args.db,
-        queue: args.queue,
-        sessionSecret: args.sessionSecret,
-        adminPasswordHash: args.adminPasswordHash,
-        authorSlug: args.authorSlug,
-        artifactsPublicBaseUrl: args.artifactsPublicBaseUrl,
-        circuitBreaker: args.circuitBreaker,
-      })
-    );
+    .use(adminUi({
+      db: args.db,
+      queue: args.queue,
+      sessionSecret: args.sessionSecret,
+      adminPasswordHash: args.adminPasswordHash,
+      authorSlug: args.authorSlug,
+      artifactsPublicBaseUrl: args.artifactsPublicBaseUrl,
+      circuitBreaker: args.circuitBreaker,
+    }));
 }
 ```
 
@@ -8560,10 +7423,7 @@ async function boot(): Promise<void> {
   const artifactStore = new ArtifactStore(env.ARTIFACTS_PATH);
   const firecrawl = new FirecrawlClient({ apiKey: env.FIRECRAWL_API_KEY });
   const anthropic = new AnthropicClient({ apiKey: env.ANTHROPIC_API_KEY });
-  const pushover = new PushoverClient({
-    userKey: env.PUSHOVER_USER_KEY,
-    appToken: env.PUSHOVER_APP_TOKEN,
-  });
+  const pushover = new PushoverClient({ userKey: env.PUSHOVER_USER_KEY, appToken: env.PUSHOVER_APP_TOKEN });
   const rateLimiter = new DomainRateLimiter({ minIntervalMs: 30_000 });
   const usageTracker = new UsageTracker(db);
   const circuitBreaker = new CircuitBreaker(db, {
@@ -8572,15 +7432,9 @@ async function boot(): Promise<void> {
   });
 
   registerJobs({
-    db,
-    queue,
-    artifactStore,
-    pushover,
+    db, queue, artifactStore, pushover,
     buildPipelineDeps: (runId) => ({
-      db,
-      firecrawl,
-      anthropic,
-      rateLimiter,
+      db, firecrawl, anthropic, rateLimiter,
       cohortSummary: null,
       saveScreenshot: async () => "(handled in job)",
       notifyPendingReview: async ({ brandSlug, brandName, versionId, reason }) => {
@@ -8602,38 +7456,22 @@ async function boot(): Promise<void> {
   scheduler.register({
     name: "sweep-all-brand-sources",
     cron: "0 3 1 * *", // monthly, 1st at 03:00 UTC
-    enqueue: () =>
-      queue.enqueue({
-        jobType: "sweep-all-brand-sources",
-        payload: {},
-        dedupeKey: `sweep:${new Date().toISOString().slice(0, 7)}`,
-      }),
+    enqueue: () => queue.enqueue({ jobType: "sweep-all-brand-sources", payload: {}, dedupeKey: `sweep:${new Date().toISOString().slice(0, 7)}` }),
   });
   scheduler.register({
     name: "recompute-cohort-summary",
     cron: "0 4 * * 1", // weekly Mondays 04:00 UTC
-    enqueue: () =>
-      queue.enqueue({
-        jobType: "recompute-cohort-summary",
-        payload: {},
-        dedupeKey: `cohort:${new Date().toISOString().slice(0, 10)}`,
-      }),
+    enqueue: () => queue.enqueue({ jobType: "recompute-cohort-summary", payload: {}, dedupeKey: `cohort:${new Date().toISOString().slice(0, 10)}` }),
   });
   scheduler.register({
     name: "detect-stuck-jobs",
     cron: "* * * * *", // every minute
-    enqueue: () =>
-      queue.enqueue({
-        jobType: "detect-stuck-jobs",
-        payload: {},
-        dedupeKey: `stuck:${new Date().getMinutes()}`,
-      }),
+    enqueue: () => queue.enqueue({ jobType: "detect-stuck-jobs", payload: {}, dedupeKey: `stuck:${new Date().getMinutes()}` }),
   });
   scheduler.start();
 
   const app = buildApp({
-    db,
-    queue,
+    db, queue,
     bearerToken: env.BLOG_API_TOKEN,
     sessionSecret: env.SESSION_SECRET,
     adminPasswordHash: env.ADMIN_PASSWORD_HASH,
@@ -8649,10 +7487,7 @@ async function boot(): Promise<void> {
 }
 
 boot().catch((err) => {
-  logger.error(
-    { err: { message: (err as Error).message, stack: (err as Error).stack } },
-    "boot failed"
-  );
+  logger.error({ err: { message: (err as Error).message, stack: (err as Error).stack } }, "boot failed");
   process.exit(1);
 });
 ```
@@ -8682,16 +7517,8 @@ const brands = new BrandRepo(db);
 const sources = new BrandSourceRepo(db);
 
 const seeds: Array<{ name: string; url: string; sizeUrl: string }> = [
-  {
-    name: "Tracksmith",
-    url: "https://tracksmith.com",
-    sizeUrl: "https://tracksmith.com/pages/size-chart",
-  },
-  {
-    name: "Path Projects",
-    url: "https://pathprojects.com",
-    sizeUrl: "https://pathprojects.com/pages/size-chart",
-  },
+  { name: "Tracksmith", url: "https://tracksmith.com", sizeUrl: "https://tracksmith.com/pages/size-chart" },
+  { name: "Path Projects", url: "https://pathprojects.com", sizeUrl: "https://pathprojects.com/pages/size-chart" },
   { name: "Janji", url: "https://janji.com", sizeUrl: "https://janji.com/pages/size-chart" },
 ];
 
@@ -8719,13 +7546,12 @@ curl -s http://localhost:3000/api/v1/health
 kill %1 2>/dev/null || true
 rm -f ./tmp/boot.sqlite
 ```
-
 Expected: JSON `{"ok":true,...}` returned.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/admin-ui/index.ts src/server/ src/main.ts scripts/ package.json bun.lockb
+git add src/admin-ui/index.ts src/server/ src/main.ts scripts/ package.json bun.lock
 git commit -m "feat: composition root + main entry + seed/password scripts"
 ```
 
@@ -8734,7 +7560,6 @@ git commit -m "feat: composition root + main entry + seed/password scripts"
 ### Task 41: Dockerfile + .dockerignore
 
 **Files:**
-
 - Create: `Dockerfile`, `.dockerignore`
 
 - [ ] **Step 1: Write Dockerfile**
@@ -8743,7 +7568,7 @@ git commit -m "feat: composition root + main entry + seed/password scripts"
 # syntax=docker/dockerfile:1
 FROM oven/bun:1-alpine AS deps
 WORKDIR /app
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production=false
 
 FROM oven/bun:1-alpine AS build
@@ -8802,7 +7627,6 @@ git commit -m "chore: Dockerfile + dockerignore for Dokploy deploy"
 ### Task 42: GitHub Actions CI (PR + main)
 
 **Files:**
-
 - Create: `.github/workflows/pr.yml`, `.github/workflows/main.yml`
 
 - [ ] **Step 1: Write .github/workflows/pr.yml**
@@ -8868,7 +7692,6 @@ git commit -m "ci: PR + main workflows (typecheck, lint, arch, test, E2E on main
 ### Task 43: Playwright config + 6 E2E flows
 
 **Files:**
-
 - Create: `playwright.config.ts`, `tests/e2e/login.spec.ts`, `tests/e2e/add-brand.spec.ts`, `tests/e2e/queue-approve.spec.ts`, `tests/e2e/queue-edit.spec.ts`, `tests/e2e/assessment-stub.spec.ts`, `tests/e2e/markdown-preview.spec.ts`, `tests/e2e/helpers.ts`
 
 The E2E suite boots the real service against a temp SQLite + stubbed external APIs (no network calls in CI). `helpers.ts` provides a `serverHandle` fixture that starts/stops the server.
@@ -9028,7 +7851,6 @@ test("queue edit textarea accepts new JSON before submission", async ({ page }) 
 - [ ] **Step 8: Write tests/e2e/assessment-stub.spec.ts and markdown-preview.spec.ts (placeholders for phase 3)**
 
 `tests/e2e/assessment-stub.spec.ts`:
-
 ```typescript
 import { test, expect } from "@playwright/test";
 import { login } from "./helpers";
@@ -9041,7 +7863,6 @@ test.skip("assessments page renders (phase 3)", async ({ page }) => {
 ```
 
 `tests/e2e/markdown-preview.spec.ts`:
-
 ```typescript
 import { test } from "@playwright/test";
 
@@ -9055,7 +7876,6 @@ test.skip("markdown editor live preview (phase 3)", async () => {
 ```bash
 bun run test:e2e
 ```
-
 Expected: 4 active tests pass; 2 placeholders skipped.
 
 - [ ] **Step 10: Commit**
@@ -9070,7 +7890,6 @@ git commit -m "test: Playwright config + 6 E2E specs (4 active, 2 phase 3 placeh
 ### Task 44: Final verification + README update
 
 **Files:**
-
 - Modify: `README.md` (expand)
 
 - [ ] **Step 1: Run the full quality-gate suite**
@@ -9082,7 +7901,6 @@ bun run arch
 bun run format
 bun run test
 ```
-
 Expected: all pass.
 
 - [ ] **Step 2: Update README.md with deployment notes**
@@ -9090,22 +7908,23 @@ Expected: all pass.
 Append to `README.md`:
 
 ```markdown
+
 ## Deployment (Dokploy on Hetzner)
 
 1. Create a Dokploy app pointed at this GitHub repo, branch `main`.
 2. Configure these env vars in the Dokploy app:
-   - `ANTHROPIC_API_KEY`
-   - `FIRECRAWL_API_KEY`
-   - `PUSHOVER_USER_KEY`, `PUSHOVER_APP_TOKEN`
-   - `BLOG_API_TOKEN` — bearer for the public API. Use `openssl rand -hex 16` once and share with the blog config.
-   - `ADMIN_PASSWORD_HASH` — generate locally with `bun run set-admin-password <password>` and paste the printed line.
-   - `SESSION_SECRET` — `openssl rand -hex 32`
-   - `DATABASE_PATH=/data/brand-scan.sqlite`
-   - `ARTIFACTS_PATH=/data/artifacts`
-   - `PUBLIC_BASE_URL=https://brand-scan.<your-domain>`
-   - `FIRECRAWL_MONTHLY_PAGE_BUDGET=1000`
-   - `ANTHROPIC_MONTHLY_USD_BUDGET=10`
-   - `NODE_ENV=production`
+    - `ANTHROPIC_API_KEY`
+    - `FIRECRAWL_API_KEY`
+    - `PUSHOVER_USER_KEY`, `PUSHOVER_APP_TOKEN`
+    - `BLOG_API_TOKEN` — bearer for the public API. Use `openssl rand -hex 16` once and share with the blog config.
+    - `ADMIN_PASSWORD_HASH` — generate locally with `bun run set-admin-password <password>` and paste the printed line.
+    - `SESSION_SECRET` — `openssl rand -hex 32`
+    - `DATABASE_PATH=/data/brand-scan.sqlite`
+    - `ARTIFACTS_PATH=/data/artifacts`
+    - `PUBLIC_BASE_URL=https://brand-scan.<your-domain>`
+    - `FIRECRAWL_MONTHLY_PAGE_BUDGET=1000`
+    - `ANTHROPIC_MONTHLY_USD_BUDGET=10`
+    - `NODE_ENV=production`
 3. Mount a persistent volume at `/data`.
 4. Configure Dokploy's volume backup to your Cloudflare R2 target.
 5. Push to `main` — Dokploy auto-deploys.
@@ -9144,7 +7963,6 @@ git tag -a phase-1-complete -m "Phase 1: foundation + size-chart pipeline + mini
 ## Self-Review Notes
 
 **Phase 1 spec coverage:** All scope items from spec section 12 are mapped to tasks:
-
 - Project scaffold + Dockerfile + Dokploy → Tasks 1, 41
 - Auth + admin UI shell → Tasks 33, 34
 - Brand CRUD + BrandSource CRUD → Tasks 31, 36, 37
@@ -9162,7 +7980,6 @@ git tag -a phase-1-complete -m "Phase 1: foundation + size-chart pipeline + mini
 - Quality gates + 6 Playwright E2E → Tasks 42, 43
 
 **Out of scope (deferred):**
-
 - Items/catalog, three remaining scoring dimensions, adaptive cadence learning → Phase 2 plan
 - Author assessments + blog backfill CLI → Phase 3 plan
 - Brand suggestions + Reddit ingestion + seed importers (Running Warehouse / REI / Fleet Feet) → Phase 4 plan
@@ -9170,7 +7987,6 @@ git tag -a phase-1-complete -m "Phase 1: foundation + size-chart pipeline + mini
 - Email-as-signal change detection → Future ideas (see spec Appendix A)
 
 **Known phase-1 limitations carried forward to later phases:**
-
 - `RunsTab` shows global runs, not brand-scoped, until a denormalized `brand_id` is added to `runs` in phase 2.
 - `assessments` admin page is a phase-3 placeholder; the E2E spec for it is skipped.
 - Markdown preview E2E is skipped (the editor lives in phase 3).
