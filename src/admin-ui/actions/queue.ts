@@ -21,44 +21,50 @@ export function queueActions(args: Readonly<{ db: DB; authorSlug: string }>): An
         }
       }
 
-      const rows = await args.db
-        .select()
-        .from(brandSizeChartVersions)
-        .where(eq(brandSizeChartVersions.id, id))
-        .limit(1);
-      const version = rows[0];
+      const version = await args.db.transaction(async (tx) => {
+        const rows = await tx
+          .select()
+          .from(brandSizeChartVersions)
+          .where(eq(brandSizeChartVersions.id, id))
+          .limit(1);
+        const v = rows[0];
+        if (!v) return null;
+
+        // Supersede any prior accepted version for this brand
+        await tx
+          .update(brandSizeChartVersions)
+          .set({ status: "superseded" })
+          .where(
+            and(
+              eq(brandSizeChartVersions.brandId, v.brandId),
+              eq(brandSizeChartVersions.status, "accepted")
+            )
+          );
+
+        // Mark this version accepted, with optional edits
+        await tx
+          .update(brandSizeChartVersions)
+          .set({
+            status: "accepted",
+            sizeChartJson: newChart ?? v.sizeChartJson,
+            acceptedAt: new Date().toISOString(),
+            acceptedBy: `human:${args.authorSlug}`,
+          })
+          .where(eq(brandSizeChartVersions.id, id));
+
+        // Point the brand to this version
+        await tx
+          .update(brands)
+          .set({ currentSizeChartVersionId: id })
+          .where(eq(brands.id, v.brandId));
+
+        return v;
+      });
+
       if (!version) {
         set.status = 404;
         return "";
       }
-
-      // Supersede any prior accepted version for this brand
-      await args.db
-        .update(brandSizeChartVersions)
-        .set({ status: "superseded" })
-        .where(
-          and(
-            eq(brandSizeChartVersions.brandId, version.brandId),
-            eq(brandSizeChartVersions.status, "accepted")
-          )
-        );
-
-      // Mark this version accepted, with optional edits
-      await args.db
-        .update(brandSizeChartVersions)
-        .set({
-          status: "accepted",
-          sizeChartJson: newChart ?? version.sizeChartJson,
-          acceptedAt: new Date().toISOString(),
-          acceptedBy: `human:${args.authorSlug}`,
-        })
-        .where(eq(brandSizeChartVersions.id, id));
-
-      // Point the brand to this version
-      await args.db
-        .update(brands)
-        .set({ currentSizeChartVersionId: id })
-        .where(eq(brands.id, version.brandId));
 
       set.status = 302;
       set.headers.location = "/admin/queue";
