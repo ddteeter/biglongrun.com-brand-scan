@@ -2,9 +2,10 @@ import { z } from "zod";
 import { and, eq, isNotNull } from "drizzle-orm";
 import type { JobHandler } from "../infrastructure/queue";
 import type { DB } from "../infrastructure/db";
-import { brandItems, brandItemChanges } from "../infrastructure/db/schema";
-import { classifyByPricePercentile, refineWithAi } from "../domain/catalog";
+import { brandItems } from "../infrastructure/db/schema";
+import { BrandItemService, classifyByPricePercentile, refineWithAi } from "../domain/catalog";
 import type { AnthropicClient } from "../infrastructure/external/anthropic";
+import { estimateAnthropicCost, MODEL_HAIKU } from "../infrastructure/external";
 import type { FirecrawlClient } from "../infrastructure/external/firecrawl";
 
 const PayloadSchema = z.object({ brandId: z.number().int().positive() });
@@ -24,6 +25,7 @@ export interface MakeArgs {
 export function makeClassifyItemTierHandler(args: MakeArgs): JobHandler {
   return async (rawPayload) => {
     const { brandId } = PayloadSchema.parse(rawPayload);
+    const itemService = new BrandItemService(args.db);
     const items = await args.db
       .select()
       .from(brandItems)
@@ -63,7 +65,7 @@ export function makeClassifyItemTierHandler(args: MakeArgs): JobHandler {
           provider: "anthropic",
           unitsUsed: aiResult.usage.inputTokens + aiResult.usage.outputTokens,
           unitsKind: "tokens",
-          estimatedCostUsd: 0,
+          estimatedCostUsd: estimateAnthropicCost(aiResult.usage, MODEL_HAIKU),
         });
         newTier = aiResult.tier;
         newRationale = aiResult.rationale;
@@ -72,28 +74,11 @@ export function makeClassifyItemTierHandler(args: MakeArgs): JobHandler {
 
       if (item.tierClassification === newTier && item.tierInferredBy === newInferredBy) continue;
 
-      await args.db
-        .update(brandItems)
-        .set({
-          tierClassification: newTier,
-          tierInferredBy: newInferredBy,
-          tierRationale: newRationale,
-        })
-        .where(eq(brandItems.id, item.id));
-
-      await args.db.insert(brandItemChanges).values({
+      await itemService.setTierFromAutomation({
         itemId: item.id,
-        changeType: "tier_reclassified",
-        beforeJson: {
-          tier: item.tierClassification,
-          inferredBy: item.tierInferredBy,
-          rationale: item.tierRationale,
-        },
-        afterJson: {
-          tier: newTier,
-          inferredBy: newInferredBy,
-          rationale: newRationale,
-        },
+        tier: newTier,
+        inferredBy: newInferredBy,
+        rationale: newRationale,
       });
     }
   };
