@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
-import { brandSizeChartVersions } from "../../infrastructure/db/schema";
+import { brandSizeChartVersions, authorBrandAssessments } from "../../infrastructure/db/schema";
 import type { CanonicalSizeChart } from "./canonical";
 import type { PriorContext } from "./extractor-claude";
 
@@ -19,10 +19,23 @@ export async function assemblePriorContext(db: DB, brandId: number): Promise<Pri
 
   const lastAccepted = (last?.sizeChartJson as CanonicalSizeChart | undefined) ?? null;
 
-  // Assessments and corrections are added in phases 3 and 6.x respectively; stubbed for phase 1.
+  const assessmentRows = await db
+    .select()
+    .from(authorBrandAssessments)
+    .where(eq(authorBrandAssessments.brandId, brandId))
+    .orderBy(desc(authorBrandAssessments.assessmentDate))
+    .limit(5);
+
+  const assessments = assessmentRows.map((row) => ({
+    authorSlug: row.authorSlug,
+    assessmentDate: row.assessmentDate,
+    ratings: row.ratingsJson as unknown as Record<string, number>,
+    proseMarkdown: row.proseMarkdown,
+  }));
+
   return {
     lastAccepted,
-    assessments: [],
+    assessments,
     corrections: [],
   };
 }
