@@ -9,11 +9,20 @@ import { SizeChartTab } from "./brand-tabs/size-chart";
 import { ScoreHistoryTab } from "./brand-tabs/score-history";
 import { RunsTab } from "./brand-tabs/runs";
 import { ItemsTab } from "./brand-tabs/items";
+import { AssessmentsTab } from "./brand-tabs/assessments";
 
-const TABS = ["overview", "sources", "size-chart", "score-history", "runs", "items"] as const;
+const TABS = [
+  "overview",
+  "sources",
+  "size-chart",
+  "score-history",
+  "runs",
+  "items",
+  "assessments",
+] as const;
 type Tab = (typeof TABS)[number];
 
-export function brandDetailRoute(args: { db: DB }): AnyElysia {
+export function brandDetailRoute(args: { db: DB; authorSlug: string }): AnyElysia {
   return new Elysia().get("/admin/brands/:slug", async ({ params, request }) => {
     const url = new URL(request.url);
     const tabParam = url.searchParams.get("tab") ?? "overview";
@@ -25,7 +34,7 @@ export function brandDetailRoute(args: { db: DB }): AnyElysia {
       .limit(1);
     if (!brand) return new Response("Not found", { status: 404 });
 
-    const tabContent = await renderTab(args.db, brand.id, tab);
+    const tabContent = await renderTab(args.db, brand, tab, args.authorSlug);
     return renderHtml(
       <Layout title={brand.name} currentPath="/admin/brands">
         <hgroup>
@@ -54,25 +63,33 @@ export function brandDetailRoute(args: { db: DB }): AnyElysia {
   });
 }
 
-async function renderTab(db: DB, brandId: number, tab: Tab): Promise<string> {
+async function renderTab(
+  db: DB,
+  brand: { id: number; slug: string },
+  tab: Tab,
+  authorSlug: string
+): Promise<string> {
   switch (tab) {
     case "overview": {
-      return OverviewTab({ db, brandId });
+      return OverviewTab({ db, brandId: brand.id });
     }
     case "sources": {
-      return SourcesTab({ db, brandId });
+      return SourcesTab({ db, brandId: brand.id });
     }
     case "size-chart": {
-      return SizeChartTab({ db, brandId });
+      return SizeChartTab({ db, brandId: brand.id });
     }
     case "score-history": {
-      return ScoreHistoryTab({ db, brandId });
+      return ScoreHistoryTab({ db, brandId: brand.id });
     }
     case "runs": {
-      return RunsTab({ db, brandId });
+      return RunsTab({ db, brandId: brand.id });
     }
     case "items": {
-      return ItemsTab({ db, brandId });
+      return ItemsTab({ db, brandId: brand.id });
+    }
+    case "assessments": {
+      return AssessmentsTab({ db, brandId: brand.id, brandSlug: brand.slug, authorSlug });
     }
   }
 }
