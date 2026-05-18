@@ -5,6 +5,7 @@ export function Nav(props: Readonly<{ current: string }>): string {
     ["/admin/queue", "Review queue"],
     ["/admin/cohort", "Cohort"],
     ["/admin/jobs", "Jobs"],
+    ["/admin/assessments", "Assessments"],
     ["/admin/usage", "Usage"],
     ["/admin/settings", "Settings"],
   ] as const;
