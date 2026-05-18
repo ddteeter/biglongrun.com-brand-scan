@@ -20,6 +20,12 @@ async function finishRun(db: DB, runId: number, summary: Record<string, unknown>
 }
 
 export function makeDiscoverBrandCatalogHandler(args: MakeArgs): JobHandler {
+  // Transactional boundary note: the outer handler is intentionally NOT wrapped in a
+  // single db.transaction. Each upsertDraft / markDiscontinued call is internally
+  // atomic via BrandItemService. A partial failure mid-iteration should still leave
+  // a runs row with status='failed' so it shows up in the admin queue and Pushover.
+  // Long-running multi-item loops also shouldn't hold a SQLite writer lock open.
+  // Same pattern as extract-brand-source.
   return async (rawPayload, ctx) => {
     const { brandId } = PayloadSchema.parse(rawPayload);
     const [brand] = await args.db.select().from(brands).where(eq(brands.id, brandId)).limit(1);
