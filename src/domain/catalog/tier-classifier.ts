@@ -87,15 +87,21 @@ export interface RefineResult {
   usage: { inputTokens: number; outputTokens: number };
 }
 
-const SYSTEM_PROMPT = `You classify running-apparel products into one of three tiers:
-- flagship: brand's headlining/premium gear — top materials, marketed prominently, performance-positioned
-- mid: standard performance products
-- basic: cotton tees, simple accessories, entry-level apparel
-- unclassified: insufficient signal
+const SYSTEM_PROMPT = `You classify running-apparel products into tiers that reflect their positioning within the brand's lineup.
 
-Inputs: a heuristic prior, the product name, and the rendered product-page markdown.
-Output JSON: { tier, rationale (<=200 chars), confidence (0-1) }.
-Use the heuristic prior as a sanity anchor. Override only with clear signal.`;
+Tier definitions:
+- flagship: the brand's top-of-line / hero products — technical fabrics (Merino, Gore-Tex, recycled nylon), highest price point, prominently featured in marketing, designed for race or performance use. Examples: race-day singlets, premium waterproof shells, carbon-plate race shoes.
+- mid: solid everyday-performance products — polyester or standard technical blends, mid-range price, suitable for training runs and general use. Most items in a running brand's catalog land here.
+- basic: entry-level or lifestyle items — cotton, casual tees, simple accessories (headbands, socks), recovery/lounge gear, or anything clearly not performance-positioned.
+- unclassified: use when you have insufficient signal to place the item (e.g., no price, no meaningful product description, ambiguous category).
+
+Output keys:
+- tier: one of "flagship", "mid", "basic", "unclassified"
+- rationale: <=200 chars explaining the key signal that drove your classification (cite material, price cue, or marketing language)
+- confidence: 0–1, how certain you are given the available page content
+
+Inputs: a heuristic prior (from price-percentile bucketing), the product name, and the rendered product-page markdown.
+Use the heuristic prior as a starting anchor. Override only when the page provides clear contradicting signal (e.g., the heuristic says "flagship" but the page describes a cotton gym tee).`;
 
 export async function refineWithAi(input: RefineInput): Promise<RefineResult> {
   const priceStr = input.basePriceUsd === null ? "(unknown)" : String(input.basePriceUsd);
