@@ -3,6 +3,7 @@ import type {
   AnthropicClient,
   DomainRateLimiter,
 } from "../../infrastructure/external";
+import { estimateAnthropicCost, MODEL_SONNET } from "../../infrastructure/external";
 import { parseShopifyProductsJson, type ShopifyCatalogDiscoverer } from "./shopify";
 import type { SitemapCatalogDiscoverer } from "./sitemap";
 import { extractItemDetail } from "./item-extractor";
@@ -84,7 +85,7 @@ export async function discoverBrandCatalog(
         provider: "anthropic",
         unitsUsed: inputTokens + outputTokens,
         unitsKind: "tokens",
-        estimatedCostUsd: (inputTokens * 3 + outputTokens * 15) / 1_000_000,
+        estimatedCostUsd: estimateAnthropicCost(result.usage, MODEL_SONNET),
       });
       if (result.confidence >= 0.3) drafts.push(result.draft);
     } catch {
