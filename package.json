@@ -19,6 +19,7 @@
     "db:migrate": "bun run src/infrastructure/db/migrate.ts",
     "seed": "bun run scripts/seed.ts",
     "set-admin-password": "bun run scripts/set-admin-password.ts",
+    "backfill-blog-assessments": "bun run scripts/backfill-blog-assessments.ts",
     "prepare": "husky"
   },
   "devDependencies": {

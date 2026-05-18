@@ -10,3 +10,4 @@ export { AuthorAssessmentService } from "./service";
 export { renderMarkdown } from "./markdown";
 export { computeDivergence, type DivergenceInput } from "./divergence";
 export { parseBlogReviewsDir, type BlogReviewParsed } from "./blog-parser";
+export { runBackfill, type BackfillOptions, type BackfillSummary } from "./backfill";
