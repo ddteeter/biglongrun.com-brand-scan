@@ -7,3 +7,4 @@ export {
   type UpdateAssessmentInput,
 } from "./types";
 export { AuthorAssessmentService } from "./service";
+export { renderMarkdown } from "./markdown";
