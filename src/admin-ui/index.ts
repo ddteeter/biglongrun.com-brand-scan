@@ -3,6 +3,7 @@ import type { DB } from "../infrastructure/db";
 import type { Queue } from "../infrastructure/queue";
 import type { CircuitBreaker } from "../domain/usage";
 import { AdminAuth, requireAdminSession } from "../infrastructure/http/auth-session";
+import { BrandItemService } from "../domain/catalog";
 import { authActions } from "./actions/auth";
 import { brandActions } from "./actions/brand";
 import { sourceActions } from "./actions/source";
@@ -39,7 +40,7 @@ export function adminUi(args: AdminUiArgs): AnyElysia {
     .use(sourceActions({ db: args.db, queue: args.queue }))
     .use(queueRoute({ db: args.db, artifactsPublicBaseUrl: args.artifactsPublicBaseUrl }))
     .use(queueActions({ db: args.db, authorSlug: args.authorSlug }))
-    .use(itemActions({ db: args.db, authorSlug: args.authorSlug }))
+    .use(itemActions({ itemService: new BrandItemService(args.db), authorSlug: args.authorSlug }))
     .use(cohortRoute({ db: args.db, queue: args.queue }))
     .use(jobsRoute({ db: args.db }))
     .use(usageRoute({ db: args.db }))
