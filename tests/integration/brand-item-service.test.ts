@@ -121,4 +121,47 @@ describe("BrandItemService", () => {
     expect(activeItems.length).toBe(0);
     expect(allItems.length).toBe(1);
   });
+
+  test("upsertDraft persists fetchState on insert", async () => {
+    const r = await repo.upsertDraft(
+      { brandId, sourceUrl: "https://x.com/p/a", name: "A", category: "tops" },
+      null,
+      { etag: '"abc123"', lastModified: "Mon, 01 Jan 2024 00:00:00 GMT", bodyHash: "deadbeef" }
+    );
+    expect(r.created).toBe(true);
+    const [item] = await db.select().from(brandItems).where(eq(brandItems.id, r.id));
+    expect(item?.lastEtag).toBe('"abc123"');
+    expect(item?.lastModifiedHeader).toBe("Mon, 01 Jan 2024 00:00:00 GMT");
+    expect(item?.lastFetchHash).toBe("deadbeef");
+    expect(item?.lastFetchedAt).toBeTruthy();
+  });
+
+  test("upsertDraft persists fetchState on update", async () => {
+    const r = await repo.upsertDraft(
+      { brandId, sourceUrl: "https://x.com/p/a", name: "A", category: "tops" },
+      null
+    );
+    const r2 = await repo.upsertDraft(
+      { brandId, sourceUrl: "https://x.com/p/a", name: "A v2", category: "tops" },
+      null,
+      { etag: '"xyz"', lastModified: null, bodyHash: "newhash" }
+    );
+    expect(r2.created).toBe(false);
+    expect(r2.id).toBe(r.id);
+    const [item] = await db.select().from(brandItems).where(eq(brandItems.id, r.id));
+    expect(item?.lastEtag).toBe('"xyz"');
+    expect(item?.lastFetchHash).toBe("newhash");
+    expect(item?.lastFetchedAt).toBeTruthy();
+  });
+
+  test("upsertDraft without fetchState leaves fetch columns null", async () => {
+    const r = await repo.upsertDraft(
+      { brandId, sourceUrl: "https://x.com/p/a", name: "A", category: "tops" },
+      null
+    );
+    const [item] = await db.select().from(brandItems).where(eq(brandItems.id, r.id));
+    expect(item?.lastEtag).toBeNull();
+    expect(item?.lastFetchHash).toBeNull();
+    expect(item?.lastFetchedAt).toBeNull();
+  });
 });

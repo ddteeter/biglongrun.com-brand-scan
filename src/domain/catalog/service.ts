@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import type { DB } from "../../infrastructure/db";
 import { brandItems, brandItemChanges } from "../../infrastructure/db/schema";
 import { ItemDraftSchema, type ItemDraft, type PerSizeData } from "./types";
+import type { ItemFetchState } from "./discoverer";
 
 // exactOptionalPropertyTypes: Zod infers `price?: number | undefined` but the column type expects
 // `price?: number`. At runtime these are equivalent — the cast is safe.
@@ -36,11 +37,20 @@ export class BrandItemService {
 
   async upsertDraft(
     raw: unknown,
-    sourceRunId: number | null
+    sourceRunId: number | null,
+    fetchState?: ItemFetchState
   ): Promise<{ id: number; created: boolean }> {
     const draft: ItemDraft = ItemDraftSchema.parse(raw);
     const existing = await this.findByBrandAndUrl(draft.brandId, draft.sourceUrl);
     const nowIso = new Date().toISOString();
+    const fetchColumns = fetchState
+      ? {
+          lastEtag: fetchState.etag,
+          lastModifiedHeader: fetchState.lastModified,
+          lastFetchHash: fetchState.bodyHash,
+          lastFetchedAt: nowIso,
+        }
+      : {};
     if (existing) {
       await this.db
         .update(brandItems)
@@ -52,6 +62,7 @@ export class BrandItemService {
           lastVerifiedAt: nowIso,
           isDiscontinued: false,
           discontinuedAt: null,
+          ...fetchColumns,
         })
         .where(eq(brandItems.id, existing.id));
       return { id: existing.id, created: false };
@@ -67,6 +78,7 @@ export class BrandItemService {
           category: draft.category,
           basePriceUsd: draft.basePriceUsd ?? null,
           perSizeDataJson: toDbPerSizeData(draft.perSizeData),
+          ...fetchColumns,
         })
         .returning({ id: brandItems.id });
       if (!row) throw new Error("brand_items insert returned empty");
