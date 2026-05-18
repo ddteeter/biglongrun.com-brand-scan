@@ -2,8 +2,7 @@ import { Elysia, type AnyElysia } from "elysia";
 import { eq } from "drizzle-orm";
 import type { DB } from "../infrastructure/db";
 import { brands, brandSizeChartVersions } from "../infrastructure/db/schema";
-import { problemDetailsResponse, ProblemTypes } from "../infrastructure/http";
-import { jsonWithCaching } from "./response-helpers";
+import { jsonWithCaching, lookupBrand } from "./response-helpers";
 
 export function brandsRoute(args: { db: DB }): AnyElysia {
   return new Elysia()
@@ -28,19 +27,9 @@ export function brandsRoute(args: { db: DB }): AnyElysia {
       return jsonWithCaching(JSON.stringify({ page, pageSize, brands: rows }), request);
     })
     .get("/api/v1/brands/:slug", async ({ params, request }) => {
-      const [brand] = await args.db
-        .select()
-        .from(brands)
-        .where(eq(brands.slug, params.slug))
-        .limit(1);
-      if (!brand) {
-        return problemDetailsResponse({
-          type: ProblemTypes.NotFound,
-          title: "Not Found",
-          status: 404,
-          detail: `No brand with slug ${params.slug}`,
-        });
-      }
+      const brandOrResponse = await lookupBrand(args.db, params.slug);
+      if (brandOrResponse instanceof Response) return brandOrResponse;
+      const brand = brandOrResponse;
       let chart: { id: number } | undefined;
       if (brand.currentSizeChartVersionId) {
         const [v] = await args.db

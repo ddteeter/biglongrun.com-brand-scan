@@ -1,12 +1,13 @@
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { desc, eq } from "drizzle-orm";
 import type { JobHandler } from "../infrastructure/queue";
 import type { DB } from "../infrastructure/db";
 import {
-  brandSizeChartVersions,
-  cohortSummaries,
-  brandScoreHistory,
   brands,
+  brandSizeChartVersions,
+  brandScoreHistory,
+  cohortSummaries,
+  brandItems,
 } from "../infrastructure/db/schema";
 import {
   scoreBreadth,
@@ -16,6 +17,9 @@ import {
   SCORING_CONFIG_VERSION,
   type CohortSummaryJson,
 } from "../domain/scoring";
+import { scoreRangeParity } from "../domain/scoring/range-parity";
+import { scorePricingEquity } from "../domain/scoring/pricing-equity";
+import { scoreColorwayEquity } from "../domain/scoring/colorway-equity";
 import type { CanonicalSizeChart } from "../domain/extraction";
 
 const PayloadSchema = z.object({ brandId: z.number().int().positive() });
@@ -44,12 +48,19 @@ export function makeScoreBrandHandler(args: { db: DB }): JobHandler {
     const chart = version.sizeChartJson as unknown as CanonicalSizeChart;
     const summary = cohort.summaryJson as unknown as CohortSummaryJson;
 
+    const items = await args.db
+      .select()
+      .from(brandItems)
+      .where(and(eq(brandItems.brandId, brandId), eq(brandItems.isDiscontinued, false)));
+
+    const rangeParityResult = scoreRangeParity(items);
+
     const dimensionScores = {
       size_range_breadth: scoreBreadth(chart, summary),
       measurement_accuracy: scoreAccuracy(chart, summary),
-      range_parity: null,
-      pricing_equity: null,
-      colorway_equity: null,
+      range_parity: items.length > 0 ? rangeParityResult.score : null,
+      pricing_equity: items.length > 0 ? scorePricingEquity(items) : null,
+      colorway_equity: items.length > 0 ? scoreColorwayEquity(items) : null,
     } as const;
     const composite = computeComposite(dimensionScores);
 
@@ -63,7 +74,14 @@ export function makeScoreBrandHandler(args: { db: DB }): JobHandler {
           scoringConfigVersion: SCORING_CONFIG_VERSION,
           cohortSummaryId: cohort.id,
           scoresJson: { ...dimensionScores, composite },
-          inputsJson: { sizeChartVersionId: version.id },
+          inputsJson: {
+            sizeChartVersionId: version.id,
+            itemCount: items.length,
+            rangeParityBreakdown: {
+              categoryParity: rangeParityResult.categoryParity,
+              tierParity: rangeParityResult.tierParity,
+            },
+          },
         })
         .returning();
 

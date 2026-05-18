@@ -8,8 +8,9 @@ import { SourcesTab } from "./brand-tabs/sources";
 import { SizeChartTab } from "./brand-tabs/size-chart";
 import { ScoreHistoryTab } from "./brand-tabs/score-history";
 import { RunsTab } from "./brand-tabs/runs";
+import { ItemsTab } from "./brand-tabs/items";
 
-const TABS = ["overview", "sources", "size-chart", "score-history", "runs"] as const;
+const TABS = ["overview", "sources", "size-chart", "score-history", "runs", "items"] as const;
 type Tab = (typeof TABS)[number];
 
 export function brandDetailRoute(args: { db: DB }): AnyElysia {
@@ -69,6 +70,9 @@ async function renderTab(db: DB, brandId: number, tab: Tab): Promise<string> {
     }
     case "runs": {
       return RunsTab({ db, brandId });
+    }
+    case "items": {
+      return ItemsTab({ db, brandId });
     }
   }
 }

@@ -9,6 +9,9 @@ import { PushoverClient } from "./infrastructure/external/pushover";
 import { DomainRateLimiter } from "./infrastructure/external/rate-limiter";
 import { ArtifactStore } from "./infrastructure/artifacts";
 import { UsageTracker, CircuitBreaker } from "./domain/usage";
+import { ShopifyCatalogDiscoverer, SitemapCatalogDiscoverer } from "./domain/catalog";
+import { eq } from "drizzle-orm";
+import { brands } from "./infrastructure/db/schema";
 import { registerJobs } from "./jobs";
 import { buildApp } from "./server/app";
 
@@ -32,6 +35,8 @@ function boot(): void {
   });
   const rateLimiter = new DomainRateLimiter({ minIntervalMs: 30_000 });
   const usageTracker = new UsageTracker(db);
+  const shopify = new ShopifyCatalogDiscoverer();
+  const sitemap = new SitemapCatalogDiscoverer();
   const circuitBreaker = new CircuitBreaker(db, {
     firecrawlMonthlyPages: env.FIRECRAWL_MONTHLY_PAGE_BUDGET,
     anthropicMonthlyUsd: env.ANTHROPIC_MONTHLY_USD_BUDGET,
@@ -42,6 +47,17 @@ function boot(): void {
     queue,
     artifactStore,
     pushover,
+    firecrawl,
+    anthropic,
+    recordUsage: (input) => usageTracker.record(input),
+    buildDiscoverDeps: () => ({
+      shopify,
+      sitemap,
+      firecrawl,
+      anthropic,
+      rateLimiter,
+      recordUsage: (input) => usageTracker.record(input),
+    }),
     buildPipelineDeps: () => ({
       db,
       firecrawl,
@@ -97,6 +113,45 @@ function boot(): void {
         payload: {},
         dedupeKey: `stuck:${String(new Date().getMinutes())}`,
       });
+    },
+  });
+  scheduler.register({
+    name: "compute-brand-cadence",
+    cron: "0 5 * * 1", // weekly Mondays 05:00 UTC
+    enqueue: async () => {
+      await queue.enqueue({
+        jobType: "compute-brand-cadence",
+        payload: {},
+        dedupeKey: `compute-brand-cadence:${new Date().toISOString().slice(0, 10)}`,
+      });
+    },
+  });
+  scheduler.register({
+    name: "sweep-all-brand-catalogs",
+    cron: "0 4 1 * *", // monthly, 1st at 04:00 UTC
+    enqueue: async () => {
+      await queue.enqueue({
+        jobType: "sweep-all-brand-catalogs",
+        payload: {},
+        dedupeKey: `sweep-catalogs:${new Date().toISOString().slice(0, 7)}`,
+      });
+    },
+  });
+  scheduler.register({
+    name: "classify-item-tiers-daily",
+    cron: "0 6 * * *", // daily 06:00 UTC
+    enqueue: async () => {
+      const allBrands = await db
+        .select({ id: brands.id })
+        .from(brands)
+        .where(eq(brands.active, true));
+      for (const b of allBrands) {
+        await queue.enqueue({
+          jobType: "classify-item-tier",
+          payload: { brandId: b.id },
+          dedupeKey: `classify-item-tier:${String(b.id)}:${new Date().toISOString().slice(0, 10)}`,
+        });
+      }
     },
   });
   scheduler.start();
