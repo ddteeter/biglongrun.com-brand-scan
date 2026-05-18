@@ -33,6 +33,10 @@ export const brandItems = sqliteTable(
       .default(sql`(datetime('now'))`),
     isDiscontinued: integer("is_discontinued", { mode: "boolean" }).notNull().default(false),
     discontinuedAt: text("discontinued_at"),
+    lastEtag: text("last_etag"),
+    lastModifiedHeader: text("last_modified_header"),
+    lastFetchHash: text("last_fetch_hash"),
+    lastFetchedAt: text("last_fetched_at"),
   },
   (t) => [uniqueIndex("brand_items_brand_url_unique").on(t.brandId, t.sourceUrl)]
 );
