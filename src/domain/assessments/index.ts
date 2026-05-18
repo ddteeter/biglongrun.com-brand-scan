@@ -8,3 +8,4 @@ export {
 } from "./types";
 export { AuthorAssessmentService } from "./service";
 export { renderMarkdown } from "./markdown";
+export { computeDivergence, type DivergenceInput } from "./divergence";

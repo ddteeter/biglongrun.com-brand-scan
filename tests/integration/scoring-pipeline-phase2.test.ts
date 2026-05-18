@@ -94,6 +94,18 @@ function makeDb() {
       scores_json TEXT NOT NULL,
       is_public INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE author_brand_assessments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      brand_id INTEGER NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+      author_slug TEXT NOT NULL,
+      assessment_date TEXT NOT NULL DEFAULT (date('now')),
+      ratings_json TEXT NOT NULL,
+      prose_markdown TEXT NOT NULL DEFAULT '',
+      origin TEXT NOT NULL,
+      source_review_url TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
   return drizzle(sqlite, { schema });
 }
