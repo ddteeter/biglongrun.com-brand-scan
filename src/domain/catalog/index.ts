@@ -1,4 +1,4 @@
-export { BrandItemRepo } from "./repo";
+export { BrandItemService } from "./service";
 export { ItemDraftSchema, PerSizeDataSchema, type ItemDraft, type PerSizeData } from "./types";
 export {
   isLikelyShopify,

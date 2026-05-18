@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import type { JobHandler } from "../infrastructure/queue";
 import type { DB } from "../infrastructure/db";
 import { brands, runs } from "../infrastructure/db/schema";
-import { BrandItemRepo, discoverBrandCatalog, type DiscoverDeps } from "../domain/catalog";
+import { BrandItemService, discoverBrandCatalog, type DiscoverDeps } from "../domain/catalog";
 
 const PayloadSchema = z.object({ brandId: z.number().int().positive() });
 
@@ -32,7 +32,7 @@ export function makeDiscoverBrandCatalogHandler(args: MakeArgs): JobHandler {
     if (!run) throw new Error("runs insert returned empty");
 
     try {
-      const repo = new BrandItemRepo(args.db);
+      const repo = new BrandItemService(args.db);
       const result = await discoverBrandCatalog(args.buildDiscoverDeps(), {
         brandId,
         brandPrimaryUrl: brand.primaryUrl,

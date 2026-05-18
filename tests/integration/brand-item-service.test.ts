@@ -3,7 +3,7 @@ import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import * as schema from "../../src/infrastructure/db/schema";
 import { brands, brandItems, brandItemChanges } from "../../src/infrastructure/db/schema";
-import { BrandItemRepo } from "../../src/domain/catalog";
+import { BrandItemService } from "../../src/domain/catalog";
 import { eq } from "drizzle-orm";
 
 function makeDb() {
@@ -41,14 +41,14 @@ function makeDb() {
   return drizzle(sqlite, { schema });
 }
 
-describe("BrandItemRepo", () => {
+describe("BrandItemService", () => {
   let db: ReturnType<typeof makeDb>;
-  let repo: BrandItemRepo;
+  let repo: BrandItemService;
   let brandId: number;
 
   beforeEach(async () => {
     db = makeDb();
-    repo = new BrandItemRepo(db);
+    repo = new BrandItemService(db);
     const [b] = await db
       .insert(brands)
       .values({ slug: "x", name: "X", primaryUrl: "https://x.com" })
