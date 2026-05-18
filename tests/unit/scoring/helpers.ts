@@ -20,6 +20,10 @@ export function makeItem(
     lastVerifiedAt: "2024-01-01T00:00:00.000Z",
     isDiscontinued: false,
     discontinuedAt: null,
+    lastEtag: null,
+    lastModifiedHeader: null,
+    lastFetchHash: null,
+    lastFetchedAt: null,
     ...overrides,
   };
 }

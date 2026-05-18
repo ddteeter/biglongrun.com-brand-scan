@@ -31,6 +31,7 @@ function makeDb() {
       first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
       last_verified_at TEXT NOT NULL DEFAULT (datetime('now')),
       is_discontinued INTEGER NOT NULL DEFAULT 0, discontinued_at TEXT,
+      last_etag TEXT, last_modified_header TEXT, last_fetch_hash TEXT, last_fetched_at TEXT,
       UNIQUE(brand_id, source_url)
     );
     CREATE TABLE brand_item_changes (

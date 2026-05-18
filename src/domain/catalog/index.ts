@@ -5,6 +5,8 @@ export {
   parseShopifyProductsJson,
   ShopifyCatalogDiscoverer,
   type ParseShopifyOptions,
+  type ConditionalState,
+  type FetchResult,
 } from "./shopify";
 export { SitemapCatalogDiscoverer } from "./sitemap";
 export { extractItemDetail, type ExtractItemInput, type ExtractItemResult } from "./item-extractor";
@@ -13,6 +15,8 @@ export {
   type DiscoverDeps,
   type DiscoverInput,
   type DiscoverResult,
+  type ItemDraftWithFetchState,
+  type ItemFetchState,
 } from "./discoverer";
 export {
   classifyByPricePercentile,

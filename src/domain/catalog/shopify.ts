@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { ItemDraft, PerSizeData } from "./types";
 
@@ -108,25 +109,75 @@ export function parseShopifyProductsJson(raw: unknown, opts: ParseShopifyOptions
   return drafts;
 }
 
+export interface ConditionalState {
+  etag?: string;
+  lastModified?: string;
+  bodyHash?: string;
+}
+
+export type FetchResult<T> =
+  | { kind: "unchanged" }
+  | {
+      kind: "changed";
+      payload: T;
+      etag: string | null;
+      lastModified: string | null;
+      bodyHash: string;
+    };
+
+function hashBody(body: string): string {
+  return createHash("sha256").update(body).digest("hex");
+}
+
+function buildConditionalHeaders(conditional?: ConditionalState): Record<string, string> {
+  const headers: Record<string, string> = { "user-agent": "brand-scan/1.0" };
+  if (conditional?.etag) headers["If-None-Match"] = conditional.etag;
+  if (conditional?.lastModified) headers["If-Modified-Since"] = conditional.lastModified;
+  return headers;
+}
+
+function parseJsonBody(
+  body: string,
+  etag: string | null,
+  lastModified: string | null,
+  bodyHash: string,
+  knownBodyHash?: string
+): FetchResult<unknown> | null {
+  if (knownBodyHash && knownBodyHash === bodyHash) return { kind: "unchanged" };
+  let json: unknown;
+  try {
+    json = JSON.parse(body) as unknown;
+  } catch {
+    return null;
+  }
+  return isLikelyShopify(json)
+    ? { kind: "changed", payload: json, etag, lastModified, bodyHash }
+    : null;
+}
+
 export class ShopifyCatalogDiscoverer {
   constructor(private readonly fetchFn: typeof globalThis.fetch = globalThis.fetch) {}
 
-  async tryFetch(brandPrimaryUrl: string): Promise<unknown> {
-    const u = new URL(brandPrimaryUrl);
-    const host = u.host;
+  async tryFetch(
+    brandPrimaryUrl: string,
+    conditional?: ConditionalState
+  ): Promise<FetchResult<unknown> | null> {
+    const host = new URL(brandPrimaryUrl).host;
     const url = `https://${host}/products.json?limit=250`;
     try {
-      const r = await this.fetchFn(url, {
-        headers: { "user-agent": "brand-scan/1.0" },
-      });
-      if (r.ok) {
-        const ct = r.headers.get("content-type") ?? "";
-        if (ct.includes("application/json")) {
-          const json: unknown = await r.json();
-          if (isLikelyShopify(json)) return json;
-        }
-      }
-      return null;
+      const r = await this.fetchFn(url, { headers: buildConditionalHeaders(conditional) });
+      if (r.status === 304) return { kind: "unchanged" };
+      if (!r.ok) return null;
+      const ct = r.headers.get("content-type") ?? "";
+      if (!ct.includes("application/json")) return null;
+      const body = await r.text();
+      return parseJsonBody(
+        body,
+        r.headers.get("etag"),
+        r.headers.get("last-modified"),
+        hashBody(body),
+        conditional?.bodyHash
+      );
     } catch {
       return null;
     }
