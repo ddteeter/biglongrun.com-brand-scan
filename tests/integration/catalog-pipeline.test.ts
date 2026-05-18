@@ -48,7 +48,7 @@ function makeDiscoverDeps(
 describe("discoverBrandCatalog", () => {
   test("returns Shopify path drafts when /products.json works", async () => {
     const fetchFn = ((url: RequestInfo | URL): Promise<Response> => {
-      if (urlToString(url) === "https://brand.com/products.json?limit=250") {
+      if (urlToString(url) === "https://brand.com/products.json?page=1&limit=250") {
         return Promise.resolve(Response.json(SHOPIFY_RESPONSE));
       }
       return Promise.resolve(new Response("", { status: 404 }));
@@ -76,7 +76,7 @@ describe("discoverBrandCatalog", () => {
 
     const fetchFn = ((url: RequestInfo | URL): Promise<Response> => {
       const key = urlToString(url);
-      if (key === "https://brand.com/products.json?limit=250")
+      if (key === "https://brand.com/products.json?page=1&limit=250")
         return Promise.resolve(new Response("", { status: 404 }));
       if (key === "https://brand.com/sitemap.xml")
         return Promise.resolve(

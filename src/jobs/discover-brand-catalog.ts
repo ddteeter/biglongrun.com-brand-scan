@@ -80,7 +80,7 @@ async function upsertCatalogSource(
 function catalogRootUrl(primaryUrl: string, sourceType: "shopify_feed" | "catalog_root"): string {
   const host = new URL(primaryUrl).host;
   return sourceType === "shopify_feed"
-    ? `https://${host}/products.json?limit=250`
+    ? `https://${host}/products.json?page=1&limit=250`
     : `https://${host}/sitemap.xml`;
 }
 

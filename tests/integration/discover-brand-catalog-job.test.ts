@@ -152,7 +152,7 @@ describe("makeDiscoverBrandCatalogHandler (Shopify path)", () => {
     const { brandId, jobId } = await insertJobAndBrand(db, "https://brand.com");
 
     const fetchFn = makeShopifyFetchFn({
-      "https://brand.com/products.json?limit=250": {
+      "https://brand.com/products.json?page=1&limit=250": {
         body: SHOPIFY_BODY,
         headers: { etag: '"first-etag"', "last-modified": "Tue, 01 Jan 2026 00:00:00 GMT" },
       },
@@ -210,12 +210,14 @@ describe("makeDiscoverBrandCatalogHandler (Shopify path)", () => {
   test("second run with same catalog (304 behavior via body hash): unchanged + no item writes", async () => {
     const { brandId, jobId: jobId1 } = await insertJobAndBrand(db, "https://brand.com");
     const { createHash } = await import("node:crypto");
-    const bodyHash = createHash("sha256").update(SHOPIFY_BODY).digest("hex");
+    // The new implementation sorts products by id and hashes the JSON-stringified sorted array
+    const sortedProducts = SHOPIFY_PRODUCTS.products.toSorted((a, b) => a.id - b.id);
+    const bodyHash = createHash("sha256").update(JSON.stringify(sortedProducts)).digest("hex");
 
     // Pre-create BrandSource as if first run already completed
     await db.insert(brandSources).values({
       brandId,
-      url: "https://brand.com/products.json?limit=250",
+      url: "https://brand.com/products.json?page=1&limit=250",
       sourceType: "shopify_feed",
       lastEtag: '"first-etag"',
       lastFetchHash: bodyHash,
@@ -233,7 +235,7 @@ describe("makeDiscoverBrandCatalogHandler (Shopify path)", () => {
 
     const fetchFn = makeShopifyFetchFn({
       // Same body → body hash will match → should return unchanged
-      "https://brand.com/products.json?limit=250": {
+      "https://brand.com/products.json?page=1&limit=250": {
         body: SHOPIFY_BODY,
         headers: { etag: '"rotated-etag"' }, // ETag changed but body same
       },

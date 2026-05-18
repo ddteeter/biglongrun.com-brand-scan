@@ -136,23 +136,95 @@ function buildConditionalHeaders(conditional?: ConditionalState): Record<string,
   return headers;
 }
 
-function parseJsonBody(
-  body: string,
-  etag: string | null,
-  lastModified: string | null,
-  bodyHash: string,
-  knownBodyHash?: string
-): FetchResult<unknown> | null {
-  if (knownBodyHash && knownBodyHash === bodyHash) return { kind: "unchanged" };
+const MAX_SHOPIFY_PAGES = 40; // safety cap: 40 × 250 = 10,000 products
+
+/** Sort products by numeric id for a stable combined hash across paginated responses. */
+function sortProductsById(products: unknown[]): unknown[] {
+  return products.toSorted((a, b) => {
+    const aId = (a as { id: number }).id;
+    const bId = (b as { id: number }).id;
+    return aId - bId;
+  });
+}
+
+/** Compute a stable hash over the combined (sorted) products array. */
+function hashProducts(products: unknown[]): string {
+  return hashBody(JSON.stringify(sortProductsById(products)));
+}
+
+/** Attempt to parse a page response body as a Shopify products array. Returns null on failure. */
+function parsePageProducts(body: string): unknown[] | null {
   let json: unknown;
   try {
     json = JSON.parse(body) as unknown;
   } catch {
     return null;
   }
-  return isLikelyShopify(json)
-    ? { kind: "changed", payload: json, etag, lastModified, bodyHash }
-    : null;
+  if (!isLikelyShopify(json)) return null;
+  return (json as { products: unknown[] }).products;
+}
+
+/** Fetch a single page; return null on network/non-OK error, undefined on non-JSON content-type. */
+async function fetchPageText(
+  fetchFn: typeof globalThis.fetch,
+  url: string,
+  headers: Record<string, string>
+): Promise<{ text: string; resp: Response } | null> {
+  let resp: Response;
+  try {
+    resp = await fetchFn(url, { headers });
+  } catch {
+    return null;
+  }
+  if (!resp.ok) return null;
+  const ct = resp.headers.get("content-type") ?? "";
+  if (!ct.includes("application/json")) return null;
+  try {
+    const text = await resp.text();
+    return { text, resp };
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch pages 2..MAX until empty, appending results to allProducts. */
+async function fetchRemainingPages(
+  fetchFn: typeof globalThis.fetch,
+  host: string,
+  allProducts: unknown[]
+): Promise<void> {
+  let page = 2;
+  while (page <= MAX_SHOPIFY_PAGES) {
+    const pageUrl = `https://${host}/products.json?page=${String(page)}&limit=250`;
+    const result = await fetchPageText(fetchFn, pageUrl, { "user-agent": "brand-scan/1.0" });
+    if (!result) break;
+
+    const products = parsePageProducts(result.text);
+    if (!products || products.length === 0) break;
+
+    allProducts.push(...products);
+
+    if (products.length < 250) break; // partial page → last page
+    page++;
+  }
+
+  if (page > MAX_SHOPIFY_PAGES) {
+    console.warn(
+      `[shopify] hit ${String(MAX_SHOPIFY_PAGES)}-page safety cap for host ${host}; catalog may be truncated`
+    );
+  }
+}
+
+/** Build the final FetchResult given the combined products array. */
+function buildResult(
+  allProducts: unknown[],
+  etag: string | null,
+  lastModified: string | null,
+  knownBodyHash?: string
+): FetchResult<unknown> {
+  const bodyHash = hashProducts(allProducts);
+  if (knownBodyHash && knownBodyHash === bodyHash) return { kind: "unchanged" };
+  return { kind: "changed", payload: { products: allProducts }, etag, lastModified, bodyHash };
 }
 
 export class ShopifyCatalogDiscoverer {
@@ -163,23 +235,45 @@ export class ShopifyCatalogDiscoverer {
     conditional?: ConditionalState
   ): Promise<FetchResult<unknown> | null> {
     const host = new URL(brandPrimaryUrl).host;
-    const url = `https://${host}/products.json?limit=250`;
-    try {
-      const r = await this.fetchFn(url, { headers: buildConditionalHeaders(conditional) });
-      if (r.status === 304) return { kind: "unchanged" };
-      if (!r.ok) return null;
-      const ct = r.headers.get("content-type") ?? "";
-      if (!ct.includes("application/json")) return null;
-      const body = await r.text();
-      return parseJsonBody(
-        body,
-        r.headers.get("etag"),
-        r.headers.get("last-modified"),
-        hashBody(body),
-        conditional?.bodyHash
-      );
-    } catch {
+    const page1Url = `https://${host}/products.json?page=1&limit=250`;
+
+    // Page 1 — send conditional headers for the fast-path 304 case
+    const page1Result = await fetchPageText(
+      this.fetchFn,
+      page1Url,
+      buildConditionalHeaders(conditional)
+    );
+
+    // Handle 304 before fetchPageText (it only returns null for non-ok, so check separately)
+    // fetchPageText returns null on !resp.ok, but 304 is handled here via a pre-check
+    if (!page1Result) {
+      // Could be 304 (which fetchPageText doesn't handle), non-ok, or network error.
+      // Re-issue to detect 304.
+      let earlyResp: Response;
+      try {
+        earlyResp = await this.fetchFn(page1Url, {
+          headers: buildConditionalHeaders(conditional),
+        });
+      } catch {
+        return null;
+      }
+      if (earlyResp.status === 304) return { kind: "unchanged" };
       return null;
     }
+
+    const page1Products = parsePageProducts(page1Result.text);
+    if (!page1Products) return null;
+
+    const page1Etag = page1Result.resp.headers.get("etag");
+    const page1LastModified = page1Result.resp.headers.get("last-modified");
+
+    const allProducts: unknown[] = [...page1Products];
+
+    // Only paginate if the first page was full
+    if (allProducts.length >= 250) {
+      await fetchRemainingPages(this.fetchFn, host, allProducts);
+    }
+
+    return buildResult(allProducts, page1Etag, page1LastModified, conditional?.bodyHash);
   }
 }
