@@ -25,8 +25,6 @@ function makeDb() {
       assessment_date TEXT NOT NULL DEFAULT (date('now')),
       ratings_json TEXT NOT NULL,
       prose_markdown TEXT NOT NULL DEFAULT '',
-      origin TEXT NOT NULL,
-      source_review_url TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -65,8 +63,8 @@ describe("AuthorAssessmentService", () => {
       ratings: goodRatings,
     });
     const a = await service.findById(id);
-    expect(a?.origin).toBe("native");
     expect(a?.proseMarkdown).toBe("");
+    expect(a?.authorSlug).toBe("drew");
   });
 
   test("create rejects out-of-range ratings", () => {

@@ -29,8 +29,6 @@ function makeDb() {
       assessment_date TEXT NOT NULL DEFAULT (date('now')),
       ratings_json TEXT NOT NULL,
       prose_markdown TEXT NOT NULL DEFAULT '',
-      origin TEXT NOT NULL,
-      source_review_url TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -103,7 +101,6 @@ describe("assemblePriorContext with assessments", () => {
         assessmentDate: "2026-01-15",
         ratingsJson: goodRatings,
         proseMarkdown: "Older assessment.",
-        origin: "native",
       },
       {
         brandId,
@@ -111,7 +108,6 @@ describe("assemblePriorContext with assessments", () => {
         assessmentDate: "2026-05-01",
         ratingsJson: { ...goodRatings, overall_inclusivity: 8 },
         proseMarkdown: "Newer assessment.",
-        origin: "native",
       },
     ]);
 
@@ -131,7 +127,6 @@ describe("assemblePriorContext with assessments", () => {
       assessmentDate: "2026-05-16",
       ratingsJson: goodRatings,
       proseMarkdown: "Great size options.",
-      origin: "native",
     });
 
     const ctx = await assemblePriorContext(db, brandId);
@@ -157,7 +152,6 @@ describe("assemblePriorContext with assessments", () => {
         authorSlug: "drew",
         assessmentDate,
         ratingsJson: goodRatings,
-        origin: "native",
       });
     }
 
@@ -201,7 +195,6 @@ describe("assemblePriorContext with assessments", () => {
       authorSlug: "drew",
       assessmentDate: "2026-05-16",
       ratingsJson: goodRatings,
-      origin: "native",
     });
 
     const ctx = await assemblePriorContext(db, brandId);

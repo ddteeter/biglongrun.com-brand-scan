@@ -23,8 +23,6 @@ const DDL = `
     assessment_date TEXT NOT NULL DEFAULT (date('now')),
     ratings_json TEXT NOT NULL,
     prose_markdown TEXT NOT NULL DEFAULT '',
-    origin TEXT NOT NULL,
-    source_review_url TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -92,7 +90,6 @@ describe("GET /api/v1/brands/:slug/assessments", () => {
       ratings: goodRatings,
       proseMarkdown: "**Older review**",
       assessmentDate: "2025-01-01",
-      origin: "native",
     });
     await svc.create({
       brandId: b.id,
@@ -100,7 +97,6 @@ describe("GET /api/v1/brands/:slug/assessments", () => {
       ratings: goodRatings,
       proseMarkdown: "**Newer review**",
       assessmentDate: "2025-06-01",
-      origin: "native",
     });
 
     const r = await app.handle(
@@ -117,8 +113,6 @@ describe("GET /api/v1/brands/:slug/assessments", () => {
         ratings: typeof goodRatings;
         proseMarkdown: string;
         proseHtml: string;
-        origin: string;
-        sourceReviewUrl: string | null;
       }[];
     };
 
@@ -136,9 +130,6 @@ describe("GET /api/v1/brands/:slug/assessments", () => {
 
     // ratings are present
     expect(json.assessments[0]?.ratings.size_options).toBe(7);
-
-    // sourceReviewUrl is null when not set
-    expect(json.assessments[0]?.sourceReviewUrl).toBeNull();
   });
 
   test("ETag returns 304 on If-None-Match", async () => {

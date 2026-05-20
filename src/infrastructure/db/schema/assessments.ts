@@ -21,8 +21,6 @@ export const authorBrandAssessments = sqliteTable("author_brand_assessments", {
     .default(sql`(date('now'))`),
   ratingsJson: text("ratings_json", { mode: "json" }).$type<AssessmentRatings>().notNull(),
   proseMarkdown: text("prose_markdown").notNull().default(""),
-  origin: text("origin", { enum: ["native", "backfilled_from_blog_review"] }).notNull(),
-  sourceReviewUrl: text("source_review_url"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

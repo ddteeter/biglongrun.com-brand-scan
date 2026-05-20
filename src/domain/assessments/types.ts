@@ -15,8 +15,6 @@ export const NewAssessmentInputSchema = z.object({
   authorSlug: z.string().min(1).max(40),
   ratings: AssessmentRatingsSchema,
   proseMarkdown: z.string().default(""),
-  origin: z.enum(["native", "backfilled_from_blog_review"]).default("native"),
-  sourceReviewUrl: z.url().nullable().optional(),
   assessmentDate: z.string().optional(),
 });
 

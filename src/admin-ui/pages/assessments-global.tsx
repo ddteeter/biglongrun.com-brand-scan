@@ -37,7 +37,6 @@ export async function AssessmentsGlobalPage(args: Readonly<{ db: DB }>): Promise
             <th>Date</th>
             <th>Author</th>
             <th>Overall</th>
-            <th>Origin</th>
             <th>Prose</th>
             <th></th>
           </tr>
@@ -56,7 +55,6 @@ export async function AssessmentsGlobalPage(args: Readonly<{ db: DB }>): Promise
                 <td>{row.assessmentDate}</td>
                 <td>{row.authorSlug}</td>
                 <td>{String(overall)}</td>
-                <td>{row.origin === "backfilled_from_blog_review" ? "blog backfill" : "native"}</td>
                 <td safe>{renderMarkdown(row.proseMarkdown.slice(0, 200))}</td>
                 <td>
                   <a href={`/admin/assessments/${String(row.id)}/edit`}>Edit</a>

@@ -27,8 +27,6 @@ describe("author_brand_assessments schema", () => {
         assessment_date TEXT NOT NULL DEFAULT (date('now')),
         ratings_json TEXT NOT NULL,
         prose_markdown TEXT NOT NULL DEFAULT '',
-        origin TEXT NOT NULL CHECK (origin IN ('native','backfilled_from_blog_review')),
-        source_review_url TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
@@ -55,11 +53,10 @@ describe("author_brand_assessments schema", () => {
           overall_inclusivity: 6.5,
         },
         proseMarkdown: "Some prose.",
-        origin: "native",
       })
       .returning();
-    expect(a?.origin).toBe("native");
     expect((a?.ratingsJson as { overall_inclusivity: number }).overall_inclusivity).toBe(6.5);
+    expect(a?.proseMarkdown).toBe("Some prose.");
   });
 
   test("cascade-deletes when brand deleted", async () => {
@@ -78,7 +75,6 @@ describe("author_brand_assessments schema", () => {
         fit_label_honesty: 5,
         overall_inclusivity: 5,
       },
-      origin: "native",
     });
     await db.delete(brands).where(eq(brands.id, b.id));
     const remaining = await db.select().from(authorBrandAssessments);

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "66e12920-5afa-44c0-a362-316c266fa340",
+  "id": "d255f742-fa5e-487c-8f1a-d183d4f2ca63",
   "prevId": "d753df84-7e9c-4757-86d6-ba4b6fac1c28",
   "tables": {
     "author_brand_assessments": {
@@ -50,20 +50,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": "''"
-        },
-        "origin": {
-          "name": "origin",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_review_url": {
-          "name": "source_review_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",

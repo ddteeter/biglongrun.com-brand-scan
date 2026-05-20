@@ -38,8 +38,6 @@ function makeDb() {
       assessment_date TEXT NOT NULL DEFAULT (date('now')),
       ratings_json TEXT NOT NULL,
       prose_markdown TEXT NOT NULL DEFAULT '',
-      origin TEXT NOT NULL CHECK (origin IN ('native','backfilled_from_blog_review')),
-      source_review_url TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );

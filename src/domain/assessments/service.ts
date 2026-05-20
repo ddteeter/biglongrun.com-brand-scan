@@ -13,13 +13,9 @@ export class AuthorAssessmentService {
       authorSlug: input.authorSlug,
       ratingsJson: input.ratings,
       proseMarkdown: input.proseMarkdown,
-      origin: input.origin,
     };
     if (input.assessmentDate !== undefined) {
       insertValues.assessmentDate = input.assessmentDate;
-    }
-    if (input.sourceReviewUrl !== undefined && input.sourceReviewUrl !== null) {
-      insertValues.sourceReviewUrl = input.sourceReviewUrl;
     }
     const [row] = await this.db
       .insert(authorBrandAssessments)

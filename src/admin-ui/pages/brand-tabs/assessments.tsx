@@ -69,7 +69,6 @@ export async function AssessmentsTab(
               <th>Date</th>
               <th>Author</th>
               <th>Composite (overall)</th>
-              <th>Origin</th>
               <th>Prose</th>
               <th></th>
             </tr>
@@ -82,7 +81,6 @@ export async function AssessmentsTab(
                 <td>
                   {String((row.ratingsJson as { overall_inclusivity: number }).overall_inclusivity)}
                 </td>
-                <td>{row.origin === "backfilled_from_blog_review" ? "blog backfill" : "native"}</td>
                 <td safe>{renderMarkdown(row.proseMarkdown.slice(0, 200))}</td>
                 <td>
                   <a href={`/admin/assessments/${String(row.id)}/edit`}>Edit</a>

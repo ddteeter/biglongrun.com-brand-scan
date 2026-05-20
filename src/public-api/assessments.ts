@@ -19,8 +19,6 @@ export function assessmentsRoute(args: { db: DB }): AnyElysia {
       ratings: row.ratingsJson,
       proseMarkdown: row.proseMarkdown,
       proseHtml: renderMarkdown(row.proseMarkdown),
-      origin: row.origin,
-      sourceReviewUrl: row.sourceReviewUrl ?? null,
     }));
 
     const body = JSON.stringify({ slug: brand.slug, count: assessments.length, assessments });

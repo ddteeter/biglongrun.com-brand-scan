@@ -5,8 +5,6 @@ CREATE TABLE `author_brand_assessments` (
 	`assessment_date` text DEFAULT (date('now')) NOT NULL,
 	`ratings_json` text NOT NULL,
 	`prose_markdown` text DEFAULT '' NOT NULL,
-	`origin` text NOT NULL,
-	`source_review_url` text,
 	`created_at` text DEFAULT (datetime('now')) NOT NULL,
 	`updated_at` text DEFAULT (datetime('now')) NOT NULL,
 	FOREIGN KEY (`brand_id`) REFERENCES `brands`(`id`) ON UPDATE no action ON DELETE cascade
