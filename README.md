@@ -145,16 +145,6 @@ bun run dev                # http://localhost:3000
 
 Admin UI: http://localhost:3000/admin (set `ADMIN_PASSWORD_HASH` via `bun run set-admin-password <password>` first).
 
-### One-shot scripts
-
-**Backfilling assessments from the biglongrun.com blog:**
-
-```bash
-bun run backfill-blog-assessments --blog-repo /path/to/biglongrun.com-blog [--dry-run]
-```
-
-Parses the blog's review MDX/YAML frontmatter, extracts historical `sizeOptions.rating` + `summary`, and creates `author_brand_assessments` rows with `origin: 'backfilled_from_blog_review'`. Brands not yet present in brand-scan are skipped with a warning. Use `--dry-run` to preview without writing.
-
 ## Quality gates
 
 Every commit must pass:
