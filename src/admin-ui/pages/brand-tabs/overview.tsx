@@ -3,6 +3,22 @@ import type { DB } from "../../../infrastructure/db";
 import { brandScoreHistory } from "../../../infrastructure/db/schema";
 import { BrandService } from "../../../domain/brands";
 
+function DivergenceBanner(args: Readonly<{ divergenceFlag: boolean | null | undefined }>) {
+  return args.divergenceFlag ? (
+    <article
+      aria-label="Divergence warning"
+      style="background: var(--pico-del-color, #e74c3c); color: #fff; padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem;"
+    >
+      <strong>{"⚠ Divergence detected"}</strong>
+      {
+        ": The computed composite score differs from the mean author assessment by more than the threshold. Review the author assessments tab for details, or re-run scoring after updating assessments."
+      }
+    </article>
+  ) : (
+    <></>
+  );
+}
+
 export async function OverviewTab(args: Readonly<{ db: DB; brandId: number }>): Promise<string> {
   const repo = new BrandService(args.db);
   const brand = await repo.findById(args.brandId);
@@ -16,6 +32,7 @@ export async function OverviewTab(args: Readonly<{ db: DB; brandId: number }>): 
   if (scores) {
     return (
       <div>
+        {DivergenceBanner({ divergenceFlag: brand?.divergenceFlag })}
         <h3>Current scores</h3>
         <table>
           <tbody>
@@ -27,23 +44,14 @@ export async function OverviewTab(args: Readonly<{ db: DB; brandId: number }>): 
             ))}
           </tbody>
         </table>
-        <p>
-          {brand?.divergenceFlag
-            ? "Divergence flag set: computed scores diverge from author assessments."
-            : ""}
-        </p>
       </div>
     );
   }
   return (
     <div>
+      {DivergenceBanner({ divergenceFlag: brand?.divergenceFlag })}
       <h3>Current scores</h3>
       <p>No scores computed yet.</p>
-      <p>
-        {brand?.divergenceFlag
-          ? "Divergence flag set: computed scores diverge from author assessments."
-          : ""}
-      </p>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   brandScoreHistory,
   cohortSummaries,
   brandItems,
+  authorBrandAssessments,
 } from "../infrastructure/db/schema";
 import {
   scoreBreadth,
@@ -21,6 +22,7 @@ import { scoreRangeParity } from "../domain/scoring/range-parity";
 import { scorePricingEquity } from "../domain/scoring/pricing-equity";
 import { scoreColorwayEquity } from "../domain/scoring/colorway-equity";
 import type { CanonicalSizeChart } from "../domain/extraction";
+import { computeDivergence } from "../domain/assessments";
 
 const PayloadSchema = z.object({ brandId: z.number().int().positive() });
 
@@ -94,6 +96,21 @@ export function makeScoreBrandHandler(args: { db: DB }): JobHandler {
         cohortSummaryId: cohort.id,
         cohortBrandCount: cohort.brandCount,
       });
+
+      const assessmentRows = await tx
+        .select({ ratingsJson: authorBrandAssessments.ratingsJson })
+        .from(authorBrandAssessments)
+        .where(eq(authorBrandAssessments.brandId, brandId));
+
+      const divergence = computeDivergence({
+        composite,
+        assessmentRatings: assessmentRows.map((a) => a.ratingsJson),
+      });
+
+      await tx
+        .update(brands)
+        .set({ divergenceFlag: divergence.divergent })
+        .where(eq(brands.id, brandId));
     });
   };
 }

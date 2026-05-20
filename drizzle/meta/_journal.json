@@ -22,6 +22,13 @@
       "when": 1779065426294,
       "tag": "0002_add_item_fetch_conditional_state",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1779235542015,
+      "tag": "0003_author_assessments",
+      "breakpoints": true
     }
   ]
 }

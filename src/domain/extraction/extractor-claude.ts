@@ -32,6 +32,7 @@ export interface PriorContext {
   lastAccepted: CanonicalSizeChart | null;
   assessments: {
     authorSlug: string;
+    assessmentDate: string;
     ratings: Record<string, number>;
     proseMarkdown: string;
   }[];
@@ -75,6 +76,8 @@ If the page lists separate men's/women's charts, return ONLY the chart matching 
 If you cannot confidently extract a chart, return overall_confidence < 0.3 and explain in what_i_saw.
 
 Numbers are inches unless the page is clearly metric; convert cm to in if needed.
+
+Author assessments are editorial 0–10 ratings on dimensions like size_options, tier_equity, pricing_equity, fit_label_honesty, overall_inclusivity. Use these as sanity anchors — if your extracted chart implies a very different size_options story than what authors have rated, lower your confidence and explain why in what_i_saw.
 `;
 
 function buildCorrectionsText(corrections: PriorContext["corrections"]): string {
@@ -88,12 +91,14 @@ function buildCorrectionsText(corrections: PriorContext["corrections"]): string 
 
 function buildAssessmentsText(assessments: PriorContext["assessments"]): string {
   return assessments
-    .map(
-      (a) =>
-        `- ${a.authorSlug}: ${Object.entries(a.ratings)
-          .map(([k, v]) => `${k}=${String(v)}`)
-          .join(", ")}`
-    )
+    .map((a) => {
+      const ratingsSummary = Object.entries(a.ratings)
+        .map(([k, v]) => `${k}=${String(v)}`)
+        .join(", ");
+      const prose = a.proseMarkdown.trim();
+      const notesLine = prose ? "\n  Notes: " + prose.slice(0, 200) : "";
+      return `- ${a.authorSlug} (${a.assessmentDate}): ${ratingsSummary}${notesLine}`;
+    })
     .join("\n");
 }
 

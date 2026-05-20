@@ -4,7 +4,7 @@ Authoritative service for running-apparel brand data — extraction, scoring, ed
 
 ## What it does
 
-brand-scan is the canonical source of truth for everything brand-level: objective size charts, item catalogs, computed inclusivity scores, and (eventually) human editorial assessments. The blog renders brand pages by fetching from brand-scan's API; it stays a thin consumer.
+brand-scan is the canonical source of truth for everything brand-level: objective size charts, item catalogs, computed inclusivity scores, and human editorial assessments. The blog renders brand pages by fetching from brand-scan's API; it stays a thin consumer.
 
 The system periodically extracts brand data from public brand websites, scores brands across five inclusivity dimensions (cohort-relative), and routes low-confidence extractions through a single-user admin review queue. Cost is bounded — Firecrawl free tier + Claude < $10/month in steady state.
 
@@ -49,6 +49,12 @@ Each item is classified into one of `flagship | mid | basic | unclassified`:
 2. **AI refinement** (optional, gated behind `ENABLE_AI_TIER_REFINE=1`) — Claude Haiku reads the product page and either confirms the heuristic or overrides it. Adds ~$0.001 per item.
 3. **Human override** via the admin UI items tab. Marked `tier_inferred_by: 'human:<author>'` so subsequent runs skip the item.
 
+### Author assessments
+
+The editor records brand-level subjective ratings (5 fixed dimensions: `size_options`, `tier_equity`, `pricing_equity`, `fit_label_honesty`, `overall_inclusivity`) plus free-form prose markdown per brand via the admin UI. Assessments serve two purposes: (1) they're calibration anchors in the extraction prompt — Claude sees prior author ratings as a sanity check on its extracted size chart; (2) the scoring engine computes a divergence flag when the composite computed score diverges from the mean author `overall_inclusivity` by more than 2.0 points, surfacing brands where objective and subjective signals disagree.
+
+Markdown is server-rendered via `marked` + `sanitize-html` — safe to expose via the public API.
+
 ### Adaptive cadence learning
 
 Once a brand has ≥3 observed change intervals on its size chart, `compute-brand-cadence` learns the median + variance and sets `brands.predicted_next_change_at` when variance is low enough to make a reliable prediction. The scheduler can then prefer the predicted window over a flat cadence.
@@ -72,6 +78,7 @@ GET  /api/v1/brands/:slug/size-chart         # current accepted size chart
 GET  /api/v1/brands/:slug/score-history      # smoothed score timeline (is_public only)
 GET  /api/v1/brands/:slug/items              # catalog with tier + per-size availability
 GET  /api/v1/scores/cohort-summary           # cohort context for relative display
+GET  /api/v1/brands/:slug/assessments        # author assessments with rendered+sanitized prose HTML
 ```
 
 All responses set `ETag` and `Cache-Control: public, max-age=300`; the blog can use `If-None-Match` for free 304s during builds. Errors use RFC 9457 problem-details.
@@ -82,7 +89,8 @@ Server-rendered JSX + HTMX + Pico.css. Pages:
 
 - **Dashboard** — at-a-glance counts, pending-review queue size, recent runs, cost burn-down
 - **Brands list + add brand** — manual entry
-- **Brand detail** — 5 tabs: overview (current scores), sources (URLs + extract-now), size chart (current + version history), score history (smoothed snapshots), runs (extraction runs for this brand), items (catalog with tier override form)
+- **Brand detail** — 7 tabs: overview (current scores + divergence flag), sources (URLs + extract-now), size chart (current + version history), score history (smoothed snapshots), runs (extraction runs for this brand), items (catalog with tier override form), assessments (author ratings + prose with live markdown preview)
+- **Assessments** (`/admin/assessments`) — global list of all author assessments across brands, with links to per-brand edit views
 - **Pending review queue** — two-column workflow: screenshot on the left, editable JSON on the right, ASTM-like cohort reference values below. Approve / save+approve / reject / reprocess actions; keyboard shortcuts via HTMX
 - **Cohort** — current cohort summary + recompute trigger
 - **Jobs / Runs / Usage / Settings**

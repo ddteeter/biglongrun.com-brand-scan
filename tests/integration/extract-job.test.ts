@@ -60,6 +60,18 @@ function makeDb() {
       run_id INTEGER, units_used REAL NOT NULL, units_kind TEXT NOT NULL,
       estimated_cost_usd REAL NOT NULL, occurred_at TEXT NOT NULL DEFAULT (datetime('now')))`
   );
+  sqlite.run(
+    `CREATE TABLE author_brand_assessments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      brand_id INTEGER NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+      author_slug TEXT NOT NULL,
+      assessment_date TEXT NOT NULL DEFAULT (date('now')),
+      ratings_json TEXT NOT NULL,
+      prose_markdown TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`
+  );
   return drizzle(sqlite, { schema });
 }
 
