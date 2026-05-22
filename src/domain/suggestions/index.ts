@@ -9,3 +9,9 @@ export {
 export { BrandSuggestionService, type AcceptResult } from "./service";
 export { MONITORED_SUBREDDITS } from "./subreddits";
 export { RedditRssClient, type RedditPost } from "./reddit-client";
+export {
+  extractBrandMentions,
+  type ExtractInput,
+  type ExtractedCandidate,
+  type ExtractResult,
+} from "./extractor";
