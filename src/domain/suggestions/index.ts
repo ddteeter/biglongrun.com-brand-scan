@@ -15,3 +15,4 @@ export {
   type ExtractedCandidate,
   type ExtractResult,
 } from "./extractor";
+export { ingestSubreddit, type IngestDeps, type IngestSubredditResult } from "./ingest";
