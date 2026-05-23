@@ -10,6 +10,7 @@ import { sourceActions } from "./actions/source";
 import { queueActions } from "./actions/queue";
 import { itemActions } from "./actions/item";
 import { assessmentActions } from "./actions/assessment";
+import { suggestionActions } from "./actions/suggestion";
 import { dashboardRoute } from "./pages/dashboard";
 import { brandsListRoute } from "./pages/brands-list";
 import { brandDetailRoute } from "./pages/brand-detail";
@@ -20,6 +21,7 @@ import { usageRoute } from "./pages/usage";
 import { settingsRoute } from "./pages/settings";
 import { assessmentEditRoute } from "./pages/assessment-edit-route";
 import { assessmentsGlobalRoute } from "./pages/assessments-global-route";
+import { suggestionsQueueRoute } from "./pages/suggestions-queue";
 
 export interface AdminUiArgs {
   db: DB;
@@ -47,6 +49,8 @@ export function adminUi(args: AdminUiArgs): AnyElysia {
     .use(assessmentActions({ db: args.db, authorSlug: args.authorSlug }))
     .use(assessmentEditRoute({ db: args.db }))
     .use(assessmentsGlobalRoute({ db: args.db }))
+    .use(suggestionsQueueRoute({ db: args.db }))
+    .use(suggestionActions({ db: args.db }))
     .use(cohortRoute({ db: args.db, queue: args.queue }))
     .use(jobsRoute({ db: args.db }))
     .use(usageRoute({ db: args.db }))
