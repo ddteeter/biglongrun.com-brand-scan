@@ -6,7 +6,7 @@ Authoritative service for running-apparel brand data — extraction, scoring, ed
 
 brand-scan is the canonical source of truth for everything brand-level: objective size charts, item catalogs, computed inclusivity scores, and human editorial assessments. The blog renders brand pages by fetching from brand-scan's API; it stays a thin consumer.
 
-The system periodically extracts brand data from public brand websites, scores brands across five inclusivity dimensions (cohort-relative), and routes low-confidence extractions through a single-user admin review queue. Cost is bounded — Firecrawl free tier + Claude < $10/month in steady state.
+The system periodically extracts brand data from public brand websites, scores brands across five inclusivity dimensions (cohort-relative), and routes low-confidence extractions through a single-user admin review queue, with passive brand discovery via Reddit so new brands surface in an editor queue rather than requiring you to find them manually. Cost is bounded — Firecrawl free tier + Claude < $10/month in steady state.
 
 ### Five scoring dimensions
 
@@ -55,6 +55,12 @@ The editor records brand-level subjective ratings (5 fixed dimensions: `size_opt
 
 Markdown is server-rendered via `marked` + `sanitize-html` — safe to expose via the public API.
 
+### Brand discovery via Reddit
+
+A weekly cron polls a curated set of running-focused subreddits (configured in `src/domain/suggestions/subreddits.ts`) via Reddit's per-subreddit RSS feeds — no authenticated Reddit API access required. For each post, Claude Haiku 4.5 extracts any running-apparel brand names mentioned, with a `plus_size_signal` flag set when the brand is mentioned in a size-inclusivity context (defaulting to true for posts from r/PlusSizeFitness). Candidates are deduped against the existing brand index and prior pending suggestions; new ones land in `brand_suggestions` with the source subreddit, post URL, context excerpt, and priority flag.
+
+The admin "Suggestions" page lists pending candidates with plus-size-priority items at the top. One click — providing the brand's primary URL — promotes a suggestion into a real `brands` row via `BrandSuggestionService.accept`, all in one transaction. Rejected suggestions are kept (with a reason) so the same brand doesn't keep getting re-proposed on subsequent sweeps.
+
 ### Adaptive cadence learning
 
 Once a brand has ≥3 observed change intervals on its size chart, `compute-brand-cadence` learns the median + variance and sets `brands.predicted_next_change_at` when variance is low enough to make a reliable prediction. The scheduler can then prefer the predicted window over a flat cadence.
@@ -93,6 +99,7 @@ Server-rendered JSX + HTMX + Pico.css. Pages:
 - **Assessments** (`/admin/assessments`) — global list of all author assessments across brands, with links to per-brand edit views
 - **Pending review queue** — two-column workflow: screenshot on the left, editable JSON on the right, ASTM-like cohort reference values below. Approve / save+approve / reject / reprocess actions; keyboard shortcuts via HTMX
 - **Cohort** — current cohort summary + recompute trigger
+- **Suggestions** (`/admin/suggestions`) — pending brand candidates from the Reddit sweep, sorted plus-size-priority first; one-click accept (with URL) promotes to a real brand
 - **Jobs / Runs / Usage / Settings**
 
 ## Operations
@@ -111,6 +118,7 @@ Server-rendered JSX + HTMX + Pico.css. Pages:
 - **Firecrawl** — JS render + screenshot for size-chart pages and product pages (free tier, ~1000 pages/month)
 - **Anthropic Claude** — Sonnet 4.6 for size-chart and item extraction; Haiku 4.5 for cheap classification (tier refinement, future email signal classification)
 - **Pushover** — operator notifications: pending-review items, budget-threshold warnings, dead-lettered jobs
+- **Reddit RSS** — Per-subreddit RSS feeds for passive brand discovery. No API key, no cost, generous rate limits with a polite User-Agent.
 
 ### Cost guardrails
 
@@ -131,6 +139,7 @@ Layered protection in the `domain/usage` module:
 | `classify-item-tiers-daily` | Daily @ 06:00 UTC                                      |
 | `compute-brand-cadence`     | Weekly Mondays @ 05:00 UTC                             |
 | `recompute-cohort-summary`  | Weekly + on-demand when N new accepted versions land   |
+| `sweep-reddit-suggestions`  | Weekly Mondays @ 07:00 UTC                             |
 | `detect-stuck-jobs`         | Every minute                                           |
 
 ## Local dev

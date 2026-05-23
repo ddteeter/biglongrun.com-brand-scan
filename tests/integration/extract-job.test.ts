@@ -187,6 +187,15 @@ describe("extract-brand-source job end-to-end", () => {
         publicBaseUrl: "http://localhost:3000",
         recordUsage: () => Promise.resolve(),
       }),
+      buildIngestDeps: () =>
+        ({
+          redditClient: { fetchSubreddit: () => Promise.resolve([]) },
+          suggestionService: {},
+          brandService: {},
+          extract: () =>
+            Promise.resolve({ candidates: [], usage: { inputTokens: 0, outputTokens: 0 } }),
+          recordUsage: () => Promise.resolve(),
+        }) as never,
     });
 
     runner = new QueueRunner({ queue, pollIntervalMs: 50, heartbeatIntervalSecs: 30 });
