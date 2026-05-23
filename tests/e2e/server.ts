@@ -5,7 +5,12 @@ import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import * as schema from "../../src/infrastructure/db/schema";
-import { brands, brandSources, brandItems } from "../../src/infrastructure/db/schema";
+import {
+  brands,
+  brandSources,
+  brandItems,
+  brandSuggestions,
+} from "../../src/infrastructure/db/schema";
 import { Queue } from "../../src/infrastructure/queue";
 import { CircuitBreaker } from "../../src/domain/usage";
 import { buildApp } from "../../src/server/app";
@@ -47,6 +52,18 @@ if (seededBrand) {
     basePriceUsd: 99.99,
   });
 }
+
+// Seed one pending suggestion so the suggestion-accept E2E test has data to operate on.
+await db.insert(brandSuggestions).values({
+  suggestedBrandName: "Senita Athletics",
+  suggestedSlug: "senita-athletics",
+  source: "reddit",
+  sourceSubreddit: "PlusSizeFitness",
+  sourcePostUrl: "https://reddit.com/test",
+  sourcePostTitle: "Plus-size finds",
+  sourceContext: "Senita has great plus-size running options.",
+  plusSizePriority: true,
+});
 
 const app = buildApp({
   db,
