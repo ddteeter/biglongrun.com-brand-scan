@@ -3,6 +3,7 @@ import type { DB } from "../infrastructure/db";
 import type { ArtifactStore } from "../infrastructure/artifacts";
 import type { PipelineDeps } from "../domain/extraction";
 import type { DiscoverDeps } from "../domain/catalog";
+import type { IngestDeps } from "../domain/suggestions";
 import type { PushoverClient } from "../infrastructure/external/pushover";
 import type { FirecrawlClient } from "../infrastructure/external/firecrawl";
 import type { AnthropicClient } from "../infrastructure/external/anthropic";
@@ -16,6 +17,8 @@ import { makeDiscoverBrandCatalogHandler } from "./discover-brand-catalog";
 import { makeClassifyItemTierHandler } from "./classify-item-tier";
 import { makeComputeBrandCadenceHandler } from "./compute-brand-cadence";
 import { makeSweepAllBrandCatalogsHandler } from "./sweep-all-brand-catalogs";
+import { makeSweepRedditSuggestionsHandler } from "./sweep-reddit-suggestions";
+import { makeIngestSubredditHandler } from "./ingest-subreddit";
 
 export interface RegisterJobsArgs {
   db: DB;
@@ -32,6 +35,7 @@ export interface RegisterJobsArgs {
   }) => Promise<void>;
   buildPipelineDeps: (runId: number) => PipelineDeps;
   buildDiscoverDeps: () => DiscoverDeps;
+  buildIngestDeps: () => IngestDeps;
 }
 
 export function registerJobs(args: RegisterJobsArgs): void {
@@ -80,5 +84,13 @@ export function registerJobs(args: RegisterJobsArgs): void {
   registerHandler(
     "sweep-all-brand-catalogs",
     makeSweepAllBrandCatalogsHandler({ db: args.db, queue: args.queue })
+  );
+  registerHandler(
+    "sweep-reddit-suggestions",
+    makeSweepRedditSuggestionsHandler({ queue: args.queue })
+  );
+  registerHandler(
+    "ingest-subreddit",
+    makeIngestSubredditHandler({ db: args.db, buildIngestDeps: args.buildIngestDeps })
   );
 }

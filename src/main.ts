@@ -10,6 +10,12 @@ import { DomainRateLimiter } from "./infrastructure/external/rate-limiter";
 import { ArtifactStore } from "./infrastructure/artifacts";
 import { UsageTracker, CircuitBreaker } from "./domain/usage";
 import { ShopifyCatalogDiscoverer, SitemapCatalogDiscoverer } from "./domain/catalog";
+import {
+  BrandSuggestionService,
+  RedditRssClient,
+  extractBrandMentions,
+} from "./domain/suggestions";
+import { BrandService } from "./domain/brands";
 import { eq } from "drizzle-orm";
 import { brands } from "./infrastructure/db/schema";
 import { registerJobs } from "./jobs";
@@ -37,6 +43,7 @@ function boot(): void {
   const usageTracker = new UsageTracker(db);
   const shopify = new ShopifyCatalogDiscoverer();
   const sitemap = new SitemapCatalogDiscoverer();
+  const redditClient = new RedditRssClient();
   const circuitBreaker = new CircuitBreaker(db, {
     firecrawlMonthlyPages: env.FIRECRAWL_MONTHLY_PAGE_BUDGET,
     anthropicMonthlyUsd: env.ANTHROPIC_MONTHLY_USD_BUDGET,
@@ -74,6 +81,13 @@ function boot(): void {
         });
       },
       publicBaseUrl: env.PUBLIC_BASE_URL,
+      recordUsage: (input) => usageTracker.record(input),
+    }),
+    buildIngestDeps: () => ({
+      redditClient,
+      suggestionService: new BrandSuggestionService(db),
+      brandService: new BrandService(db),
+      extract: (post) => extractBrandMentions({ client: anthropic, post }),
       recordUsage: (input) => usageTracker.record(input),
     }),
   });
@@ -134,6 +148,17 @@ function boot(): void {
         jobType: "sweep-all-brand-catalogs",
         payload: {},
         dedupeKey: `sweep-catalogs:${new Date().toISOString().slice(0, 7)}`,
+      });
+    },
+  });
+  scheduler.register({
+    name: "sweep-reddit-suggestions",
+    cron: "0 7 * * 1", // weekly Mondays 07:00 UTC (after compute-brand-cadence at 05:00)
+    enqueue: async () => {
+      await queue.enqueue({
+        jobType: "sweep-reddit-suggestions",
+        payload: {},
+        dedupeKey: `sweep-reddit:${new Date().toISOString().slice(0, 10)}`,
       });
     },
   });
